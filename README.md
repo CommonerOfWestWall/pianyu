@@ -87,7 +87,7 @@ Windows 工程路径需为 ASCII；若实际目录包含非 ASCII 字符，可�
 ## 来源与分层许可
 
 - 应用、Android 界面和本项目修改代码：GPL-3.0-or-later，见 [`license/LICENSE`](license/LICENSE) 和根目录 [`NOTICE.md`](NOTICE.md)。
-- SpektraLab 固定上游提交：`d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289`。引擎还包含 Windows/Vulkan 局部修改和 Android overlay，差异随源码包提供。
+- [SpektraLab](https://github.com/JamesQiu2005/SpektraLab) 固定上游提交：[`d90cf9a`](https://github.com/JamesQiu2005/SpektraLab/commit/d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289)。引擎还包含 Windows/Vulkan 局部修改和 Android overlay，差异随源码包提供。
 - spektrafilm profiles、LUT 及直接派生数据：CC BY-SA 4.0，见 [`license/SPEKTRAFILM_LICENSE.txt`](license/SPEKTRAFILM_LICENSE.txt)；该文件及 `license/NOTICE.md` 保留原文。
 - Material Icons 为 Apache-2.0；Noto Serif SC 子集为 SIL OFL 1.1；Vulkan-Headers、volk 及其他第三方组件按各自目录许可证提供。来源记录见 [`asset-provenance/`](asset-provenance/)。
 
@@ -95,7 +95,7 @@ Windows 工程路径需为 ASCII；若实际目录包含非 ASCII 字符，可�
 
 ## 致谢
 
-感谢 Andrea Volpato 的 spektrafilm、SpektraLab 上游工程、Vulkan/volk、Google Material Icons 和 Noto Serif SC。片屿没有沿用网友安卓版的 UI 或二进制核心。
+感谢 Andrea Volpato 的 [spektrafilm](https://github.com/andreavolpato/spektrafilm)、[SpektraLab](https://github.com/JamesQiu2005/SpektraLab) 上游工程、Vulkan/volk、Google Material Icons 和 Noto Serif SC。片屿没有沿用网友安卓版的 UI 或二进制核心。
 
 ## 参与贡献
 

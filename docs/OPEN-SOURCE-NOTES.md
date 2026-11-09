@@ -1,6 +1,6 @@
 # 0.3.1 开源说明
 
-片屿使用 SpektraLab 上游固定提交 `d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289`。公开源码同时包含此前 Windows/Vulkan 的局部修改，以及 Android unfused-FMA 数学探针和设备 capability overlay。对应源码、`native/SOURCE-DIRTY-DIFF.patch`、预编译 `.so` 和 [`build-engine.ps1`](build-engine.ps1) 一并提供，用来说明预编译核心如何产生。
+片屿使用 [JamesQiu2005/SpektraLab](https://github.com/JamesQiu2005/SpektraLab) 上游固定提交 `d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289`。公开源码同时包含此前 Windows/Vulkan 的局部修改，以及 Android unfused-FMA 数学探针和设备 capability overlay。对应源码、`native/SOURCE-DIRTY-DIFF.patch`、预编译 `.so` 和 [`build-engine.ps1`](build-engine.ps1) 一并提供，用来说明预编译核心如何产生。
 
 应用 Kotlin/Compose 界面、JNI、C++ 修改及项目脚本按 GPL-3.0-or-later 提供。根目录 `NOTICE.md` 保留上游 NOTICE 并追加片屿修改说明；`license/NOTICE.md` 和 `license/SPEKTRAFILM_LICENSE.txt` 保留原文。根 `COPYING` 是完整 GPL 文本副本；使用此文件名是为了兼容 Windows 上既有 `license/` 目录的大小写规则。
 
