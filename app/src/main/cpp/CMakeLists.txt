@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(pianyu_jni LANGUAGES CXX)
+add_library(pianyu_jni SHARED pianyu_jni.cpp)
+target_compile_features(pianyu_jni PRIVATE cxx_std_20)
+target_include_directories(pianyu_jni PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(pianyu_jni PRIVATE android jnigraphics dl log)
+target_link_options(pianyu_jni PRIVATE "-Wl,-z,max-page-size=16384")

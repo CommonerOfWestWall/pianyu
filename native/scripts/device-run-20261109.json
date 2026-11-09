@@ -1,0 +1,10 @@
+{
+  "device": {"model": "24122RKC7C", "api": 36, "hardware": "qcom", "vulkan": "adreno", "gpu_driver": "com.qualcomm.qti.gpudrivers.sun.api35"},
+  "deployment": {"remote": "/data/local/tmp/pianyu-probe-20261109", "adb_state": "device"},
+  "environment": {"battery_c": 32.6, "gpu0_c": 58.0, "gpu1_c": 59.2, "cpu_max_c": 88.0, "existing_app": "left running; no stop/clear/input action"},
+  "runs": [
+    {"size": "1024x683", "exit_code": 1, "stage": "engine_create", "error": "Vulkan math probe: fma is not fused on a GPU device (fast or contracted math?)", "output_written": false},
+    {"size": "2048x1365", "status": "not_run_after_1024_gate", "output_written": false}
+  ],
+  "limitation": "Adreno rejected the upstream Vulkan precision gate. A local shader probe overlay was tested and produced the same rejection; no result was accepted or fabricated."
+}

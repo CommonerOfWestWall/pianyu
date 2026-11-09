@@ -1,0 +1,7 @@
+{
+  "shader_input": "a=float32(0.1)+float32(0.37)*i; b=a*float32(0.5)+1",
+  "lanes": 64,
+  "device_observed": {"exact_lanes": 0, "zero_lanes": 62, "uninformative_zero_input_lanes": 2, "representative_got": 0.0},
+  "cpu_binary64_reference": {"representative_lane": 0, "want": 7.45057349149647e-11, "nonzero_min": -1.1177062333445065e-05, "nonzero_max": 7.45849683880806e-06},
+  "interpretation": "The engine reached readback and classified all informative lanes as zero; this is an unfused multiply/add path, not an upload or index failure. The existing Dekker specialization is the intended fallback but remains unvalidated on this GPU until a local overlay build can accept and report it."
+}

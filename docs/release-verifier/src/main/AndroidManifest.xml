@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="片屿本地验收工具" />
+    <instrumentation android:name="studio.pianyu.verifier.ReleaseVerifier" android:targetPackage="studio.pianyu.app" android:label="片屿 Release 验收" />
+</manifest>

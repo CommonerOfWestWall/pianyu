@@ -1,0 +1,4 @@
+ M engine/CMakeLists.txt
+ M engine/src/gpu/vulkan_gpu.cpp
+ M engine/src/pipeline/pipeline.cpp
+?? engine/src/shaders/vulkan/spk_highlight_headroom.comp

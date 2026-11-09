@@ -1,0 +1,63 @@
+[
+  {
+    "file": "ic_photo.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/image/photo_library/materialiconsoutlined/24px.svg",
+    "source_sha256": "7d6fa0bb45792306061d0b3cfdcadd146c33cdc4116b81817c990250147a4378"
+  },
+  {
+    "file": "ic_compare.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/image/compare/materialiconsoutlined/24px.svg",
+    "source_sha256": "3a2ed835e59334144b6040c50da7e75bb7f62e33369efec4f6a2cb6d16648759"
+  },
+  {
+    "file": "ic_expand.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/navigation/fullscreen/materialiconsoutlined/24px.svg",
+    "source_sha256": "e747e6c90436010a4d2521a8280a9cd45f21863343e2c9587678464dcf81cc05"
+  },
+  {
+    "file": "ic_crop.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/image/crop/materialiconsoutlined/24px.svg",
+    "source_sha256": "c0b9bef168f0c640c2b76abae86df869054545b1f3760e67b1eb3bb55c8d7c2b"
+  },
+  {
+    "file": "ic_adjust.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/image/tune/materialiconsoutlined/24px.svg",
+    "source_sha256": "f8e07b768e504bf5fe300e1b588532d5abd6e38dc7f06de8cef660946a75747d"
+  },
+  {
+    "file": "ic_back.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/navigation/arrow_back/materialiconsoutlined/24px.svg",
+    "source_sha256": "5eab5a4557e97143f2166479366672a76bbc31d805be62efa75c7d1a10e13cf2"
+  },
+  {
+    "file": "ic_undo.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/content/undo/materialiconsoutlined/24px.svg",
+    "source_sha256": "1d0d4bb983e715a552d40aad301d78c2c3a8172c4ba59517bf19d3175a04d931"
+  },
+  {
+    "file": "ic_redo.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/content/redo/materialiconsoutlined/24px.svg",
+    "source_sha256": "addb186e64dfc70a2647cbd3350fdfc7d102206cf712f5e4a32845e7234384fa"
+  },
+  {
+    "file": "ic_close.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/navigation/close/materialiconsoutlined/24px.svg",
+    "source_sha256": "817eeece6e725ef03c5be0b0ade63c53506d6f8678684dd41eb0c0deaae3ac7b"
+  },
+  {
+    "file": "ic_export.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/file/file_upload/materialiconsoutlined/24px.svg",
+    "source_sha256": "de3f9fde5f45d294665eead7a2a9b4b337a5196f76d1bcb62c0632197ec423b8"
+  },
+  {
+    "file": "ic_check.xml",
+    "url": "https://raw.githubusercontent.com/google/material-design-icons/master/src/navigation/check/materialiconsoutlined/24px.svg",
+    "source_sha256": "e7bd57a6f37125b7363cfc9fb11f8c1dc9aec12003c94e96329d1cca5c11d8f8"
+  },
+  {
+    "file": "editor_serif.ttf",
+    "css": "https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600&text=%E7%89%87%E5%B1%BFPIANYU%E6%97%A5%E5%B8%B8%E6%9A%96%E8%89%B2%E6%B8%85%E6%96%B0%E7%BB%BF%E6%84%8F%E6%B5%93%E9%83%81%E8%B0%83%E7%94%B5%E5%BD%B1%E5%85%89%E5%A4%9C%E6%99%95%E8%87%AA%E7%84%B6%E6%AD%A3%E5%BD%A9%E9%A3%8E%E6%99%AF%E5%85%8B%E5%88%B6%E5%A4%8D%E5%8F%A4%E6%9F%94%E5%92%8C%E9%BB%91%E7%99%BD%E7%BA%AA%E5%AE%9E%E8%B0%83%E6%95%B4%E8%A3%81%E5%88%87%E5%AF%BC%E5%87%BA",
+    "url": "https://fonts.gstatic.com/l/font?kit=H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7RcrCWv6_GoPGPTFB8vBdIuUGxh5A-MKtWsxdj3Znvv6Y2W2kzaFI81rDZtdF6HW0yA5Oi1MpAACM9Mlzl9yJODkB8Ubov3rsJRoxOih-vygUjfvLci0LDmdepoa1rtfVQSU80RxVZzAVFNRkhYhZ7b3vZD5V6wWS1BiHaEXGb1yB8&skey=37fe335b8fd815cc&v=v36",
+    "subset": "片屿PIANYU日常暖色清新绿意浓郁调电影光夜晕自然正彩风景克制复古柔和黑白纪实调整裁切导出"
+  }
+]

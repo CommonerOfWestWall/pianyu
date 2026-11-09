@@ -1,0 +1,17 @@
+Pianyu data redistribution notes — 2026-11-09
+
+Original profiles, LUTs and direct derivative data: spektrafilm by Andrea Volpato
+https://github.com/andreavolpato/spektrafilm
+CC BY-SA 4.0. Full original license and preamble are bundled in
+../licenses/SPEKTRAFILM_LICENSE.txt and source license/SPEKTRAFILM_LICENSE.txt.
+
+Pianyu contributors selected the sRGB resource subset from SpektraLab source
+d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289: unused minilab LUT tables and unrelated
+CAM16 colour-space tables are omitted. Retained material arrays and LUT values
+are unmodified. Mobile UI recipes select existing models and parameters; they
+do not constitute new measurements or recalibrated film data. SpektraLab's
+own profiles and data are documented in source engine/resources_product/NOTICE.md.
+
+Android Vulkan SPIR-V files are compiled from the included source and overlay;
+they are code under GPL-3.0-or-later, not newly measured profile data.
+0.3.1 changes the demonstration photograph and adds bundled notices only.

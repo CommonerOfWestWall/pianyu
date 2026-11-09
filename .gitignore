@@ -1,0 +1,34 @@
+# Local Android/Gradle configuration and build output
+.gradle/
+.kotlin/
+__pycache__/
+*.pyc
+local.properties
+**/build/
+**/.cxx/
+
+# IDE and OS files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local signing material and credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+
+# Generated native outputs
+native/scripts/build/
+native/scripts/*.so
+native/scripts/spk_android_driver
+native/scripts/libc++_shared.so
+
+# Local evidence and private photos
+outputs/
+release-evidence/
+*.apk
+*.aab

@@ -1,0 +1,10 @@
+{
+  "device": {"model": "24122RKC7C", "api": 36, "gpu": "Adreno (TM) 830", "backend": "native-vulkan"},
+  "remote": "/data/local/tmp/pianyu-probe-20261109",
+  "overlay": "android-unfused-fma.patch; accepts only exact=0, zero=62, two uninformative lanes and sets fused_fma_=0",
+  "runs": {
+    "1024x683": {"first_render_wall_ms": 247.53, "first_engine_ms": 247.526, "repeat_wall_ms": 63.6439, "repeat_engine_ms": 63.636, "status": 0, "mae_u16": 0.020214700768667642, "max_abs_u16": 1, "nonzero": 2669184, "min": 0, "max": 65535, "std_u16": 22300.35082910526},
+    "2048x1365": {"first_render_wall_ms": 599.043, "first_engine_ms": 599.037, "repeat_wall_ms": 163.651, "repeat_engine_ms": 163.643, "status": 0, "mae_u16": 0.020197494562728936, "max_abs_u16": 1, "nonzero": 11100706, "min": 0, "max": 65535, "std_u16": 21702.69365934573}
+  },
+  "comparison": "Each Android RGBA16 result compared with desktop DLL using same input, params and resources; max absolute difference was 1 U16 code and desktop/Android nonzero counts matched. PNGs are results/android_1024.png and results/android_2048.png."
+}

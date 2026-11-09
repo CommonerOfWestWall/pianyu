@@ -1,0 +1,19 @@
+{
+  "source": "asset-provenance/demo-original.png",
+  "provenance": "AI-generated original still life. See asset-provenance/DEMO.md. Not a real film reference.",
+  "encoded_size": [
+    3456,
+    2304
+  ],
+  "exif_orientation": 6,
+  "jpeg_display_size": [
+    2304,
+    3456
+  ],
+  "heif_display_size": [
+    2304,
+    3456
+  ],
+  "heif_encoder": "pillow-heif 1.8.1",
+  "expectation": "Android ImageDecoder applies orientation 6; software ARGB_8888 in sRGB."
+}

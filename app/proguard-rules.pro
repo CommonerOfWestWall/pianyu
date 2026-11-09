@@ -1,0 +1,1 @@
+-keep class studio.pianyu.app.NativeCore { native <methods>; }

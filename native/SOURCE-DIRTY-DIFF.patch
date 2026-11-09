@@ -1,0 +1,46 @@
+diff --git a/engine/CMakeLists.txt b/engine/CMakeLists.txt
+index 04d5330..286dcd2 100644
+--- a/engine/CMakeLists.txt
++++ b/engine/CMakeLists.txt
+@@ -119,6 +119,7 @@ if(NOT APPLE)
+             spk_reduce_max spk_boost spk_bw_correct spk_edr spk_cctf_decode
+             spk_zoom_bilinear_mirror spk_geometry_resample_df
+             spk_lut3d_trilinear spk_di_normalise
++            spk_highlight_headroom
+             CACHE INTERNAL "")
+         set(vulkan_spirv)
+         file(GLOB vulkan_includes "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/vulkan/*.glsl")
+@@ -226,7 +227,8 @@ if(NOT APPLE)
+             endif()
+             add_library(spektralab_engine_shared SHARED ${shared_sources})
+             set_target_properties(spektralab_engine_shared PROPERTIES
+-                OUTPUT_NAME spektralab_engine PREFIX "")
++                OUTPUT_NAME spektralab_engine PREFIX ""
++                ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shared")
+             target_compile_features(spektralab_engine_shared PUBLIC cxx_std_20)
+             target_include_directories(spektralab_engine_shared PRIVATE
+                 "${CMAKE_CURRENT_SOURCE_DIR}/include"
+diff --git a/engine/src/gpu/vulkan_gpu.cpp b/engine/src/gpu/vulkan_gpu.cpp
+index 5421a00..42422eb 100644
+--- a/engine/src/gpu/vulkan_gpu.cpp
++++ b/engine/src/gpu/vulkan_gpu.cpp
+@@ -88,6 +88,7 @@ constexpr KernelSpec kKernels[] = {
+     {"spk_geometry_resample_df", 4, kWorkgroup},
+     {"spk_lut3d_trilinear", 6, kWorkgroup},
+     {"spk_di_normalise", 5, kWorkgroup},
++    {"spk_highlight_headroom", 4, kWorkgroup},
+ };
+ 
+ const KernelSpec* find_kernel(const char* name) {
+diff --git a/engine/src/pipeline/pipeline.cpp b/engine/src/pipeline/pipeline.cpp
+index b43d0ee..2c7e44c 100644
+--- a/engine/src/pipeline/pipeline.cpp
++++ b/engine/src/pipeline/pipeline.cpp
+@@ -6,6 +6,7 @@
+ #endif
+ 
+ #include <chrono>
++#include <algorithm>
+ #include <cmath>
+ #include <cstring>
+ 
