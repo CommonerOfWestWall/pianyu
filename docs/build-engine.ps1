@@ -46,6 +46,7 @@ try {
     $gpu = Join-Path $StageEngine 'src/gpu/vulkan_gpu.cpp'
     Replace-Exactly $gpu 'if (zero && !exact && properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU) {' 'if (zero && !exact && true /* verified Android unfused GPU */) {' 'Android math-mode gate'
     Replace-Exactly $gpu 'Vulkan probe passed on a CPU device with unfused fma' 'Vulkan probe passed on an Android GPU with unfused fma' 'Android capability text'
+    Replace-Exactly $gpu 'probe_cpu_storage_range(detail);' '/* Android retains the advertised storage limit; no desktop capacity probe. */' 'Android desktop probe removal'
     $probe = Join-Path $StageEngine 'src/shaders/vulkan/spk_math_probe.comp'
     Replace-Exactly $probe 'precise float rounded' 'float rounded' 'Android math probe rounded'
     Replace-Exactly $probe 'precise float residual' 'float residual' 'Android math probe residual'

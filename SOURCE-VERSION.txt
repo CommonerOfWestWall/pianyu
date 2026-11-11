@@ -1,2 +1,8 @@
-SpektraLab source: d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289
-Packaged: 2026-11-09T09:17:51.2953298Z
+Pianyu release: v0.3.2 / versionCode 12 (Android 10+, arm64; public prerelease)
+Application base: e4b55795b66ce06ef2875b13bd6bc3ff7240ebea
+SpektraLab engine source: d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289, plus native/SOURCE-DIRTY-DIFF.patch and the Android overlay built by docs/build-engine.ps1
+Upstream comparison: SpektraLab 0b5acfc4e45b7a946ed33a3c4b4e60429d208b66; spektrafilm 3bb2c2d2801ff68b92019cf1dbcbb133d60832bc
+Workflow review: SpektraLab 1952c63537ec576d24422f1065b12495631346a5; engine/material base unchanged in v11/v12
+Release tag: v0.3.2
+Snapshot date: 2026-11-11
+Per-file hashes and APK pairing are recorded in the distribution source-files.json and verification.json.

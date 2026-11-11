@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.sp
 fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> Unit, about: () -> Unit) {
     val library=model.library
     val busy=library.batch!=null
+    var confirmRemove by remember { mutableStateOf(false) }
+    if(confirmRemove) AlertDialog(onDismissRequest={confirmRemove=false},title={Text("移出 ${library.selected.size} 张照片？")},
+        text={Text("只清除片屿中的照片记录与编辑设置，手机相册里的原文件会保留。")},
+        confirmButton={TextButton(onClick={model.removeSelectedFromLibrary();confirmRemove=false}){Text("移出照片库")}},
+        dismissButton={TextButton(onClick={confirmRemove=false}){Text("取消")}})
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment=Alignment.CenterVertically) {
             Image(painterResource(R.drawable.brand_mark),null,Modifier.size(46.dp).graphicsLayer(scaleX=1.4f,scaleY=1.4f))
@@ -47,6 +52,7 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
                 Text(if(library.selected.isEmpty()) "照片库 · ${library.entries.size}" else "已选 ${library.selected.size} 张",Modifier.weight(1f),color=WarmWhite)
                 if(library.selected.isNotEmpty()) TextButton(onClick=model::clearSelection,enabled=!busy) {Text("取消选择")}
+                if(library.selected.isEmpty()) TextButton(onClick=model::loadDemo,enabled=!busy&&!library.importing) {Text("打开示例")}
                 TextButton(onClick=model::selectAll,enabled=!busy) {Text("全选")}
             }
             Text(if(library.selected.isEmpty()) "点击编辑 · 长按多选" else "套用仅同步调色，每张构图独立保留",fontSize=12.sp,color=WarmWhite.copy(alpha=.6f),modifier=Modifier.padding(horizontal=16.dp,vertical=6.dp))
@@ -57,13 +63,16 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
                     Box(Modifier.aspectRatio(.8f).clip(RoundedCornerShape(8.dp)).background(Color(0xFF333530))
                         .combinedClickable(enabled=!busy,onClick={if(library.selected.isNotEmpty())model.toggleSelected(photo.id) else model.openPhoto(photo.id)},onLongClick={model.toggleSelected(photo.id)})) {
                         if(thumb!=null) Image(thumb.asImageBitmap(),photo.name,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-                        else CircularProgressIndicator(Modifier.size(22.dp).align(Alignment.Center),strokeWidth=2.dp)
-                        if(photo.settings!=EditSettings()) Text("已调色",fontSize=10.sp,color=WarmWhite,modifier=Modifier.align(Alignment.BottomStart).background(Color(0xBB20211F)).padding(5.dp))
+                        else if(photo.id in library.thumbnailLoading) CircularProgressIndicator(Modifier.size(22.dp).align(Alignment.Center),strokeWidth=2.dp)
+                        else Text(if(photo.id in library.thumbnailErrors)"读取失败\n点开查看" else "点开编辑",fontSize=12.sp,color=WarmWhite,
+                            modifier=Modifier.align(Alignment.Center).padding(8.dp))
+                        if(thumb!=null) Text(if(photo.id in library.originalThumbnails)"原图预览" else "效果预览",fontSize=10.sp,color=WarmWhite,modifier=Modifier.align(Alignment.BottomStart).background(Color(0xBB20211F)).padding(5.dp))
                         if(library.selected.isNotEmpty()) Surface(color=if(photo.id in library.selected)Brass else Color(0xAA20211F),shape=RoundedCornerShape(16.dp),modifier=Modifier.align(Alignment.TopEnd).padding(7.dp)) {Text(if(photo.id in library.selected)"✓" else "○",Modifier.padding(horizontal=7.dp,vertical=3.dp),color=if(photo.id in library.selected)Graphite else WarmWhite)}
                     }
                 }
             }
             if(library.selected.isNotEmpty()&&!busy) Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick={confirmRemove=true},modifier=Modifier.weight(1f)) {Text("移出")}
                 OutlinedButton(onClick=model::applyRecipeToSelected,enabled=library.recipe!=null,modifier=Modifier.weight(1f)) {Text("套用配方")}
                 Button(onClick=exportBatch,modifier=Modifier.weight(1f)) {Text("保存 ${library.selected.size} 张")}
             }

@@ -3,6 +3,7 @@ package studio.pianyu.verifier;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -10,19 +11,32 @@ import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /** Framework-only verifier: tests the shrunk release without a debug Kotlin classpath. */
 public final class ReleaseVerifier extends Instrumentation {
     private static final String APP = "studio.pianyu.app";
     private final StringBuilder evidence = new StringBuilder();
-    @Override public void onCreate(Bundle args) { super.onCreate(args); start(); }
+    private boolean publicSmoke;
+    private boolean importedStudy;
+    @Override public void onCreate(Bundle args) { super.onCreate(args); publicSmoke = args != null && "public-smoke".equals(args.getString("mode")); importedStudy = args != null && "imported-study".equals(args.getString("mode")); start(); }
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            if (importedStudy) {
+                exportImportedStudy(); result.putString("stream", evidence.toString());
+                finish(Activity.RESULT_OK, result); return;
+            }
             evidence.append(shell("am start -W -n " + APP + "/.MainActivity"));
             waitPackage(APP);
+            if (publicSmoke) {
+                smokePublicDemo(); result.putString("stream", evidence.toString());
+                writeReport(); finish(Activity.RESULT_OK, result); return;
+            }
             if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例"); else click("窗边静物 · 示例");
             waitText("日常暖色"); waitEnabled("导出"); screenshot("01-editor.png");
             click("调色"); waitText("曝光"); screenshot("02-adjustment.png");
@@ -67,6 +81,77 @@ public final class ReleaseVerifier extends Instrumentation {
             try { writeReport(); } catch (Exception ignored) { }
             finish(Activity.RESULT_CANCELED, result);
         }
+    }
+    /** Explicit local research mode. Never included in the normal smoke flow or main APK. */
+    private void exportImportedStudy() throws Exception {
+        File library = new File(getTargetContext().getFilesDir(), "library-v2.json");
+        JSONObject saved;
+        try (FileInputStream input = new FileInputStream(library)) {
+            saved = new JSONObject(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        JSONArray photos = saved.optJSONArray("photos");
+        require(photos != null, "photo library unavailable");
+        File directory = new File(getTargetContext().getExternalFilesDir(null), "imported-study-v12");
+        require(directory.isDirectory() || directory.mkdirs(), "cannot create private study directory");
+        JSONArray rows = new JSONArray(); int copied = 0;
+        for (int index = 0; index < photos.length(); index++) {
+            JSONObject photo = photos.getJSONObject(index);
+            String uriString = photo.optString("uri", "");
+            if (uriString.isEmpty()) continue; // Bundled demo is not a user import.
+            JSONObject row = new JSONObject().put("number", index + 1)
+                .put("settings", photo.optJSONObject("settings"));
+            try {
+                Uri uri = Uri.parse(uriString);
+                String mime = getTargetContext().getContentResolver().getType(uri);
+                String extension = "image/heic".equals(mime) || "image/heif".equals(mime) ? "heic"
+                    : "image/png".equals(mime) ? "png" : "image/jpeg".equals(mime) ? "jpg" : "bin";
+                File file = new File(directory, String.format(java.util.Locale.ROOT, "imported-%03d.%s", index + 1, extension));
+                try (java.io.InputStream input = getTargetContext().getContentResolver().openInputStream(uri);
+                     FileOutputStream output = new FileOutputStream(file)) {
+                    require(input != null, "source unavailable"); input.transferTo(output);
+                }
+                row.put("file", file.getName()).put("mime", mime).put("bytes", file.length()); copied++;
+            } catch (Exception error) {
+                // Keep private URI/name/error details off the console and out of public reports.
+                row.put("read_error", error.getClass().getSimpleName());
+            }
+            rows.put(row);
+        }
+        try (FileOutputStream output = new FileOutputStream(new File(directory, "manifest.json"))) {
+            output.write(rows.toString(2).getBytes(StandardCharsets.UTF_8));
+        }
+        evidence.append("PASS: explicitly requested local imported-photo study; copied=").append(copied)
+            .append("; entries=").append(rows.length()).append("; no uploads or library edits\n");
+    }
+    private void smokePublicDemo() throws Exception {
+        if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例");
+        else click("打开示例");
+        waitText("日常暖色"); waitEnabled("导出");
+        click("调色"); click("还原全部 · 可撤销"); click("风格");
+        screenshot("v032-public-default.png");
+        click("风格说明"); waitText("明白了"); screenshot("v032-reference.png"); click("明白了");
+        click("风格说明"); click("关闭片屿预设"); waitText("胶片模型 · 未加片屿预设");
+        click("风格说明"); click("启用片屿预设"); waitEnabled("导出");
+        evidence.append("finish=disabled and re-enabled via actual release UI\n");
+        click("调色"); click("胶片曝光"); setSlider("胶片曝光调整", .7f); waitEnabled("导出");
+        screenshot("v032-film-exposure.png"); click("重置胶片曝光"); waitEnabled("导出");
+        evidence.append("film exposure=+0.7EV and reset via release UI\n");
+        click("风格");
+        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色");
+        evidence.append("recommended=reset through style description; color reset with geometry preserved\n");
+        click("裁切 / 旋转"); click("自由"); click("右转 90°"); screenshot("v032-free-rotate.png"); click("重置"); click("完成");
+        click("调色"); click("HSL分色调整"); waitText("红 · 饱和"); screenshot("v032-hsl.png");
+        click("风格"); click("导出"); waitText("原尺寸 · 保留输入像素");
+        click("PNG · 无损像素（文件较大）"); screenshot("v032-original-export.png");
+        click("保存到相册"); waitText("已保存到相册 · 片屿");
+        click("导出"); click("HEIF · 高效存储（设备支持时）"); screenshot("v12-heif-export.png");
+        click("保存到相册"); waitText("已保存到相册 · 片屿");
+        evidence.append("HEIF=release UI gallery save completed; hardware writer in shrunk build\n");
+        click("导出"); click("分享编辑后照片"); waitPackage("com.android.intentresolver");
+        evidence.append("share=system chooser; no recipient selected\n");
+        shell("input keyevent KEYCODE_BACK"); waitPackage(APP);
+        click("导出"); click("JPEG · 最高质量（仍有损）"); click("取消");
+        evidence.append("PASS: v032 release public demo, recommended start, model description, HSL, free crop, rotation, original PNG and HEIF save, HEIF system share chooser\n");
     }
     private String shell(String command) throws Exception {
         try (ParcelFileDescriptor.AutoCloseInputStream input = new ParcelFileDescriptor.AutoCloseInputStream(getUiAutomation().executeShellCommand(command))) {

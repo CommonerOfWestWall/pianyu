@@ -20,6 +20,7 @@ fun LicenseDialog(onClose: () -> Unit) {
         "GPL-3.0-or-later · 应用与引擎" to "GPL-3.0.txt",
         "SpektraLab · 来源与修改" to "SpektraLab-NOTICE.md",
         "spektrafilm · CC BY-SA 4.0" to "SPEKTRAFILM_LICENSE.txt",
+        "AndroidX HeifWriter · Apache-2.0" to "AndroidX-HeifWriter-LICENSE.txt",
         "Material Icons · Apache-2.0" to "Material-Icons-LICENSE.txt",
         "Noto Serif SC · SIL OFL 1.1" to "Noto-Serif-SC-OFL.txt",
         "Android NDK · 运行时声明" to "Android-NDK-NOTICE.txt",

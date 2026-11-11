@@ -8,7 +8,7 @@
 # 在本目录，配置 JDK17 和 ANDROID_HOME，路径需为 ASCII
 ../../gradlew.bat -p . assembleDebug
 adb install -r -t build/outputs/apk/debug/PianyuReleaseVerifier-debug.apk
-adb shell am instrument -w studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
+adb shell am instrument -w -e mode public-smoke studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
 adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence
 ```
 
@@ -26,3 +26,10 @@ adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence
 
 截图目录为release-evidence-v03。新增HSL实际滑块数值校验、命名配方保存/改名/应用/删除取消与确认、明确原图对比按钮。文本输入通过可编辑节点语义动作，并等待对话框准备；滑块按RangeInfo定位，避免把同名标签当作滑块。只处理公开示例。
 
+
+## 0.3.2 public-smoke
+
+上述命令只操作公开内置示例：风格说明、关闭/启用额外预设、自由裁切与旋转、HSL、原尺寸PNG保存和系统分享选择器，不选接收人。不要在带有用户照片的库运行旧版默认流程（省略 mode），旧流程包含全选库条目。
+
+
+v12的public-smoke还会重置此风格调色、保存HEIF并打开HEIF分享选择器（不选择接收人），最终恢复JPEG格式偏好。只有显式mode=imported-study会读取已有导入条目以做用户授权的本地私人研究；该模式不选择或遍历其他相册照片，不改变库中的设置，产物不得公开。测试工具和私人产物均不进入生产APK。

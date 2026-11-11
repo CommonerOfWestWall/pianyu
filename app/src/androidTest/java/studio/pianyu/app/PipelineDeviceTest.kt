@@ -23,6 +23,23 @@ class PipelineDeviceTest {
     private val testContext get() = instrumentation.context
 
     @Test
+    fun originalDecodeAndSourceSharePreserveDimensionsAndBytes() {
+        val file = File(context.cacheDir, "exports/original-source-test.jpg").apply {
+            parentFile?.mkdirs(); testContext.assets.open("sample_orientation6.jpg").use { input ->
+                outputStream().use { output -> input.copyTo(output) }
+            }
+        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+        val original = PhotoIO.decode(context, uri, 0)
+        assertEquals(2304, original.width)
+        assertEquals(3456, original.height)
+        val shared = PhotoIO.shareSource(context, uri)
+        val bytes = context.contentResolver.openInputStream(shared)!!.use { it.readBytes() }
+        assertTrue(bytes.contentEquals(file.readBytes()))
+        original.recycle()
+    }
+
+    @Test
     fun fullSizePhonePipelineTimings() = runBlocking<Unit> {
         val rows = JSONArray()
         for (edge in listOf(960, 1280, 2048)) {
@@ -116,7 +133,8 @@ class PipelineDeviceTest {
         assertEquals("strength zero pixel count", originalPixels.size, zeroPixels.size)
         assertTrue("strength zero changed pixels", originalPixels.contentEquals(zeroPixels))
         zero.recycle()
-        val full = PhotoIO.finish(jpeg, red, EditSettings(strength = 1f))
+        // Test the legacy blend contract independently of the creative finishing layer.
+        val full = PhotoIO.finish(jpeg, red, EditSettings(strength = 1f, lookVersion = 0))
         val redPixels = pixels(red)
         val fullPixels = pixels(full)
         val fullDiagnostic = identityDiagnostic("strength_one", red, full, redPixels, fullPixels)

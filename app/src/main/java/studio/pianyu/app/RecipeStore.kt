@@ -7,7 +7,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class NamedRecipe(val id: String, val name: String, val settings: EditSettings)
-data class SavedRecipes(val recipes: List<NamedRecipe> = emptyList(), val exportEdge: Int = 2048)
+/** exportEdge=0 means the decoded source dimensions (the default). */
+data class SavedRecipes(val recipes: List<NamedRecipe> = emptyList(), val exportEdge: Int = 0, val lossless: Boolean = false,
+    val format: ExportFormat = if (lossless) ExportFormat.PNG else ExportFormat.JPEG)
 
 class RecipeStore(context: Context) {
     private val file = AtomicFile(File(context.filesDir, "recipes-v1.json"))
@@ -21,11 +23,17 @@ class RecipeStore(context: Context) {
             NamedRecipe(row.getString("id"), row.getString("name"),
                 settingsFromJson(row.optJSONObject("settings")).colorRecipe())
         }
-        return SavedRecipes(recipes, json.optInt("exportEdge", 2048).takeIf { it == 1080 || it == 2048 } ?: 2048)
+        // Version 1 could not distinguish a deliberate resize from its forced default.
+        // Upgrade once to original dimensions; version 2 retains explicit resize choices.
+        val edge = if (json.optInt("version", 1) < 2) 0 else json.optInt("exportEdge", 0)
+        val legacyLossless = json.optBoolean("lossless", false)
+        val format = ExportFormat.fromStored(if (json.has("exportFormat")) json.optString("exportFormat") else null, legacyLossless)
+        return SavedRecipes(recipes, edge.takeIf { it == 0 || it == 1080 || it == 2048 } ?: 0, format == ExportFormat.PNG, format)
     }
 
     @Synchronized fun write(value: SavedRecipes) {
-        val json = JSONObject().put("version", 1).put("exportEdge", value.exportEdge)
+        val json = JSONObject().put("version", 2).put("exportEdge", value.exportEdge)
+            .put("lossless", value.format == ExportFormat.PNG).put("exportFormat", value.format.name)
             .put("recipes", JSONArray().apply {
                 value.recipes.forEach { recipe -> put(JSONObject().put("id", recipe.id)
                     .put("name", recipe.name).put("settings", settingsToJson(recipe.settings.colorRecipe()))) }

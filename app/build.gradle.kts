@@ -11,8 +11,8 @@ android {
         applicationId = "studio.pianyu.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 12
+        versionName = "0.3.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { cppFlags += "-std=c++20"; arguments += "-DANDROID_STL=c++_shared" } }
@@ -43,6 +43,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2")
     implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.heifwriter:heifwriter:1.1.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

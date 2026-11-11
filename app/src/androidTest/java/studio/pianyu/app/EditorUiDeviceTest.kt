@@ -29,7 +29,7 @@ class EditorUiDeviceTest {
         device.executeShellCommand("am start -W -n $packageName/.MainActivity")
         run {
             android.util.Log.i("PianyuUiTest", "activity launched; wait demo")
-            val demo = device.wait(Until.findObject(By.text("试用示例")), 1500L) ?: device.wait(Until.findObject(By.desc("窗边静物 · 示例")), timeout) ?: error("demo unavailable")
+            val demo = device.wait(Until.findObject(By.text("试用示例")), 1500L) ?: device.wait(Until.findObject(By.text("打开示例")),1500L) ?: device.wait(Until.findObject(By.desc("窗边静物 · 示例")), timeout) ?: error("demo unavailable")
             assertTrue("demo action must be enabled", demo.isEnabled)
             demo.click()
             android.util.Log.i("PianyuUiTest", "demo clicked")
@@ -60,7 +60,7 @@ class EditorUiDeviceTest {
             takeEvidence("04-saved.png")
 
             waitText("导出").click()
-            waitText("分享").click()
+            waitText("分享编辑后照片").click()
             assertTrue(
                 "system share chooser did not open",
                 device.wait(Until.hasObject(By.pkg("com.android.intentresolver")), timeout)

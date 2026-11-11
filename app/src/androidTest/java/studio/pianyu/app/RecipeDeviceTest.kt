@@ -32,6 +32,33 @@ class RecipeDeviceTest {
         throw AssertionError("recipe condition timeout")
     }
 
+    @Test fun missingExportPreferenceUsesOriginalSizeDefault() {
+        val app=IsolatedTestApplication.create(instrumentation.targetContext)
+        try {
+            File(app.filesDir,"recipes-v1.json").writeText(JSONObject().put("version",1)
+                .put("recipes",org.json.JSONArray()).toString())
+            assertEquals(0, RecipeStore(app).read().exportEdge)
+            File(app.filesDir,"recipes-v1.json").writeText(JSONObject().put("version",1)
+                .put("exportEdge",2048).put("recipes",org.json.JSONArray()).toString())
+            assertEquals("old forced default must migrate",0, RecipeStore(app).read().exportEdge)
+            RecipeStore(app).write(SavedRecipes(exportEdge=1080,lossless=true))
+            assertEquals(1080, RecipeStore(app).read().exportEdge)
+            assertTrue(RecipeStore(app).read().lossless)
+            assertEquals(ExportFormat.PNG, RecipeStore(app).read().format)
+            RecipeStore(app).write(SavedRecipes(exportEdge=0, format=ExportFormat.HEIF))
+            val heif = RecipeStore(app).read()
+            assertEquals(ExportFormat.HEIF, heif.format)
+            assertFalse(heif.lossless)
+            assertEquals("HEIF", JSONObject(File(app.filesDir,"recipes-v1.json").readText()).getString("exportFormat"))
+            File(app.filesDir,"recipes-v1.json").writeText(JSONObject().put("version",2)
+                .put("lossless",true).put("recipes",org.json.JSONArray()).toString())
+            assertEquals(ExportFormat.PNG, RecipeStore(app).read().format)
+            File(app.filesDir,"recipes-v1.json").writeText(JSONObject().put("version",1)
+                .put("exportEdge",999).put("recipes",org.json.JSONArray()).toString())
+            assertEquals(0, RecipeStore(app).read().exportEdge)
+        } finally { app.cleanup() }
+    }
+
     @Test fun namedRecipesPersistApplyWithoutGeometryAndUndoThenRenameDelete() {
         val app=IsolatedTestApplication.create(instrumentation.targetContext)
         lateinit var model:EditorModel
@@ -62,7 +89,7 @@ class RecipeDeviceTest {
             lateinit var source:android.graphics.Bitmap
             lateinit var filtered:android.graphics.Bitmap
             onMain {source=model.state.source!!;filtered=model.state.filtered!!}
-            val expected=runBlocking {withContext(NativeCore.dispatcher){NativeCore.render(app,source,Looks[color.lookIndex])}}
+            val expected=runBlocking {withContext(NativeCore.dispatcher){NativeCore.render(app,source,Looks[color.lookIndex], color.grain, color.filmExposure, autoFilmExposure = color.autoFilmExposure, autoFilmExposureMethod = color.autoFilmExposureMethod)}}
             assertTrue("applying saved recipe must also rerender its film",expected.sameAs(filtered))
             expected.recycle()
             onMain {

@@ -3,7 +3,7 @@ Local Android overlay (research only; upstream source is unchanged):
     if (zero && !exact && true /* verified Android unfused GPU */) {
         fused_fma_ = 0;
         detail = "Vulkan probe passed on an Android GPU with unfused fma (double-float kernels use an exact Dekker product; full shader parity pending)";
-        probe_cpu_storage_range(detail);
+        /* Android retains the advertised storage limit; no desktop capacity probe. */
         return true;
     }
 
@@ -11,3 +11,5 @@ The `true` condition is only the local overlay replacement for the original
 `properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU` condition, after the
 64-lane probe established `exact=0`, `zero=62`, and 2 uninformative lanes.
 Mixed or nonzero unexpected residuals still return false before this branch.
+The CPU-only storage-capacity experiment is deliberately not called on Android;
+its limit-sized test buffers can consume multiple GiB regardless of photo size.

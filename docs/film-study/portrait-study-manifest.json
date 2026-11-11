@@ -1,0 +1,386 @@
+[
+  {
+    "id": "01-style",
+    "width": 1536,
+    "height": 1024,
+    "input_sha256": "46d193c269343e1d73ea9ae036d8975945696b270f9c0bb77a9ca9ec80e27d49",
+    "output_sha256": "bc849bf80225359ec29380db12101f6bd92bb4c5ce2f5e041024eee419c514f0",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "brightness": 0,
+      "warmth": 0,
+      "grain": 0,
+      "cropAspect": 0,
+      "exposure": 0,
+      "contrast": 0,
+      "saturation": 0,
+      "highlights": 0,
+      "shadows": 0,
+      "fade": 0,
+      "tint": 0,
+      "sharpen": 0,
+      "vignette": 0,
+      "crop": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "quarterTurns": 0,
+      "straightenDegrees": 0,
+      "flipHorizontal": false,
+      "flipVertical": false,
+      "hsl": {
+        "red": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "orange": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "yellow": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "green": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "cyan": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "blue": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "purple": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "magenta": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        }
+      }
+    },
+    "params": {
+      "input_color_space": "sRGB",
+      "input_cctf_decoding": true,
+      "output_color_space": "sRGB",
+      "output_cctf_encoding": true,
+      "auto_exposure": false,
+      "exposure_compensation_ev": 0,
+      "print_exposure": 1,
+      "film_format_mm": 35,
+      "film_stock": "kodak_kodachrome_64",
+      "print_stock": "kodak_portra_endura",
+      "scan_film": true,
+      "grain_active": false,
+      "grain_amount": 0,
+      "glare_active": false,
+      "halation_active": false,
+      "halation_amount": 0.15,
+      "scene_latitude_active": false
+    },
+    "elapsed_ms": 1134.424062
+  },
+  {
+    "id": "02-tone",
+    "width": 1536,
+    "height": 1024,
+    "input_sha256": "46d193c269343e1d73ea9ae036d8975945696b270f9c0bb77a9ca9ec80e27d49",
+    "output_sha256": "00f20e6eed62b55bf82702d6322d4d63367990a8aefa8302d0c890eef8e488c8",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "brightness": 0,
+      "warmth": 0.12,
+      "grain": 0,
+      "cropAspect": 0,
+      "exposure": 0,
+      "contrast": 0.2,
+      "saturation": 0.06,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "fade": 0.02,
+      "tint": 0.02,
+      "sharpen": 0,
+      "vignette": 0,
+      "crop": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "quarterTurns": 0,
+      "straightenDegrees": 0,
+      "flipHorizontal": false,
+      "flipVertical": false,
+      "hsl": {
+        "red": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "orange": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "yellow": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "green": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "cyan": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "blue": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "purple": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "magenta": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        }
+      }
+    },
+    "params": {
+      "input_color_space": "sRGB",
+      "input_cctf_decoding": true,
+      "output_color_space": "sRGB",
+      "output_cctf_encoding": true,
+      "auto_exposure": false,
+      "exposure_compensation_ev": 0,
+      "print_exposure": 1,
+      "film_format_mm": 35,
+      "film_stock": "kodak_kodachrome_64",
+      "print_stock": "kodak_portra_endura",
+      "scan_film": true,
+      "grain_active": false,
+      "grain_amount": 0,
+      "glare_active": false,
+      "halation_active": false,
+      "halation_amount": 0.15,
+      "scene_latitude_active": false
+    },
+    "elapsed_ms": 1003.55302
+  },
+  {
+    "id": "03-color",
+    "width": 1536,
+    "height": 1024,
+    "input_sha256": "46d193c269343e1d73ea9ae036d8975945696b270f9c0bb77a9ca9ec80e27d49",
+    "output_sha256": "b43120a547a4cecefb1f43540187f0b8f11a3f22a8840ba1ecd61937e09cf2f9",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "brightness": 0,
+      "warmth": 0.12,
+      "grain": 0,
+      "cropAspect": 0,
+      "exposure": 0,
+      "contrast": 0.2,
+      "saturation": 0.06,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "fade": 0.02,
+      "tint": 0.02,
+      "sharpen": 0,
+      "vignette": 0,
+      "crop": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "quarterTurns": 0,
+      "straightenDegrees": 0,
+      "flipHorizontal": false,
+      "flipVertical": false,
+      "hsl": {
+        "red": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "orange": {
+          "hue": -0.03,
+          "saturation": -0.08,
+          "lightness": 0.05
+        },
+        "yellow": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "green": {
+          "hue": -0.2,
+          "saturation": -0.25,
+          "lightness": -0.1
+        },
+        "cyan": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "blue": {
+          "hue": 0.12,
+          "saturation": 0.1,
+          "lightness": -0.1
+        },
+        "purple": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "magenta": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        }
+      }
+    },
+    "params": {
+      "input_color_space": "sRGB",
+      "input_cctf_decoding": true,
+      "output_color_space": "sRGB",
+      "output_cctf_encoding": true,
+      "auto_exposure": false,
+      "exposure_compensation_ev": 0,
+      "print_exposure": 1,
+      "film_format_mm": 35,
+      "film_stock": "kodak_kodachrome_64",
+      "print_stock": "kodak_portra_endura",
+      "scan_film": true,
+      "grain_active": false,
+      "grain_amount": 0,
+      "glare_active": false,
+      "halation_active": false,
+      "halation_amount": 0.15,
+      "scene_latitude_active": false
+    },
+    "elapsed_ms": 1226.854947
+  },
+  {
+    "id": "04-grain",
+    "width": 1536,
+    "height": 1024,
+    "input_sha256": "46d193c269343e1d73ea9ae036d8975945696b270f9c0bb77a9ca9ec80e27d49",
+    "output_sha256": "484f60577600d6925d92cfbfc4057f350de8eb88555dc2fed2c339b411a4d0ed",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "brightness": 0,
+      "warmth": 0.12,
+      "grain": 0.18,
+      "cropAspect": 0,
+      "exposure": 0,
+      "contrast": 0.2,
+      "saturation": 0.06,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "fade": 0.02,
+      "tint": 0.02,
+      "sharpen": 0,
+      "vignette": 0,
+      "crop": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "quarterTurns": 0,
+      "straightenDegrees": 0,
+      "flipHorizontal": false,
+      "flipVertical": false,
+      "hsl": {
+        "red": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "orange": {
+          "hue": -0.03,
+          "saturation": -0.08,
+          "lightness": 0.05
+        },
+        "yellow": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "green": {
+          "hue": -0.2,
+          "saturation": -0.25,
+          "lightness": -0.1
+        },
+        "cyan": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "blue": {
+          "hue": 0.12,
+          "saturation": 0.1,
+          "lightness": -0.1
+        },
+        "purple": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        },
+        "magenta": {
+          "hue": 0,
+          "saturation": 0,
+          "lightness": 0
+        }
+      }
+    },
+    "params": {
+      "input_color_space": "sRGB",
+      "input_cctf_decoding": true,
+      "output_color_space": "sRGB",
+      "output_cctf_encoding": true,
+      "auto_exposure": false,
+      "exposure_compensation_ev": 0,
+      "print_exposure": 1,
+      "film_format_mm": 35,
+      "film_stock": "kodak_kodachrome_64",
+      "print_stock": "kodak_portra_endura",
+      "scan_film": true,
+      "grain_active": true,
+      "grain_amount": 0.36000001430511475,
+      "glare_active": false,
+      "halation_active": false,
+      "halation_amount": 0.15,
+      "scene_latitude_active": false
+    },
+    "elapsed_ms": 1325.968437
+  }
+]

@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 
 private val hslNames = mapOf(
     HslColor.RED to "红", HslColor.ORANGE to "橙", HslColor.YELLOW to "黄", HslColor.GREEN to "绿",
@@ -52,6 +51,6 @@ private fun HslSlider(label: String, value: Float, onChange: (Float) -> Unit, mo
         Slider(value = value, onValueChange = onChange, onValueChangeFinished = model::finishAdjustment,
             valueRange = -1f..1f, modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                 .semantics { contentDescription = label })
-        Text((value * 100).roundToInt().toString())
+        ParameterValue(label, value, -1f..1f) { onChange(it); model.finishAdjustment() }
     }
 }

@@ -45,7 +45,7 @@ class EditorHistoryDeviceTest {
         }
         assertEquals(.2f, readState(model).settings.strength, .0001f)
         instrumentation.runOnMainSync { model.undo() }
-        assertEquals(.65f, readState(model).settings.strength, .0001f)
+        assertEquals(.75f, readState(model).settings.strength, .0001f)
         instrumentation.runOnMainSync { model.redo() }
         assertEquals(.2f, readState(model).settings.strength, .0001f)
 
@@ -58,6 +58,43 @@ class EditorHistoryDeviceTest {
         assertEquals(0f, readState(model).settings.brightness, .0001f)
         instrumentation.runOnMainSync { model.redo() }
         assertEquals(.2f, readState(model).settings.brightness, .0001f)
+        awaitIdle(model)
+        val beforeFilmExposure = readBitmap(model)!!.copy(Bitmap.Config.ARGB_8888, false)
+        instrumentation.runOnMainSync {
+            model.edit(model.state.settings.copy(filmExposure = .7f)); model.finishAdjustment()
+        }
+        awaitIdle(model)
+        assertEquals(.7f, readState(model).displayedSettings!!.filmExposure, .0001f)
+        val exposedFilm = readBitmap(model)!!.copy(Bitmap.Config.ARGB_8888, false)
+        assertTrue("film exposure must invalidate the native frame", !exposedFilm.sameAs(beforeFilmExposure))
+        instrumentation.runOnMainSync { model.undo() }
+        awaitIdle(model)
+        assertTrue("undo must restore the zero-exposure cached frame", readBitmap(model)!!.sameAs(beforeFilmExposure))
+        instrumentation.runOnMainSync { model.redo() }
+        awaitIdle(model)
+        assertTrue("redo must restore the exposed cached frame", readBitmap(model)!!.sameAs(exposedFilm))
+        instrumentation.runOnMainSync {
+            model.edit(model.state.settings.copy(filmExposure = -.5f)); model.finishAdjustment(); model.undo()
+        }
+        awaitIdle(model)
+        assertTrue("a stale exposure render must not overwrite undo", readBitmap(model)!!.sameAs(exposedFilm))
+        beforeFilmExposure.recycle(); exposedFilm.recycle()
+        val beforeFinishToggle = readState(model).settings
+        val modelOnly = beforeFinishToggle.copy(lookVersion = 0,
+            strength = Looks[beforeFinishToggle.lookIndex].filmStrength(beforeFinishToggle))
+        instrumentation.runOnMainSync { model.setLookFinish(false) }
+        awaitIdle(model)
+        assertEquals(modelOnly, readState(model).settings)
+        assertEquals(Looks[beforeFinishToggle.lookIndex].filmStrength(beforeFinishToggle),
+            Looks[modelOnly.lookIndex].filmStrength(modelOnly), .00001f)
+        instrumentation.runOnMainSync { model.undo() }
+        awaitIdle(model)
+        assertEquals(beforeFinishToggle, readState(model).settings)
+        instrumentation.runOnMainSync { model.redo() }
+        awaitIdle(model)
+        assertEquals(modelOnly, readState(model).displayedSettings)
+        instrumentation.runOnMainSync { model.undo() }
+        awaitIdle(model)
         var intermediateFrames = 0
         for (step in 1..30) {
             instrumentation.runOnMainSync { model.edit(model.state.settings.copy(exposure = step / 30f)) }
