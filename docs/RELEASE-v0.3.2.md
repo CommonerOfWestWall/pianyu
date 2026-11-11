@@ -3,7 +3,7 @@
 v0.3.2 是面向 Android 10 及以上、arm64 设备的公开预发布版，公开 tag 为 `v0.3.2`。发布资产为：
 
 - [pianyu-0.3.2-v12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-arm64.apk)，SHA-256：`8097a256958ca699bf57fa45af5cbe0af6ee8f508d684c037975f6935bcb7909`，大小 12,738,109 bytes。
-- [pianyu-0.3.2-v12-source.zip](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-source.zip)。对应文件哈希记录在源码包内。
+- [v0.3.2 完整源码（ZIP）](https://github.com/CommonerOfWestWall/pianyu/archive/refs/tags/v0.3.2.zip)。源码按发布标签由GitHub生成；逐文件哈希见发布附件 `source-files.json`。
 
 ## 本版内容
 
