@@ -10,7 +10,7 @@ v12新增保留构图、可撤销的“重置此风格调色”，以及不经JP
 
 ## 下载
 
-0.3.2 是公开预发布版：[Release 页面](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.2)。直接下载：[pianyu-0.3.2-v12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-arm64.apk)；源码包：[pianyu-0.3.2-v12-source.zip](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-source.zip)。Release 构建使用既有 Android Debug 开发测试签名，适合开发和测试；不能承诺该签名会用于长期升级。
+0.3.2 是公开预发布版：[Release 页面](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.2)。直接下载：[pianyu-0.3.2-v12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-arm64.apk)；源码包：[v0.3.2 完整源码（ZIP）](https://github.com/CommonerOfWestWall/pianyu/archive/refs/tags/v0.3.2.zip)。Release 构建使用既有 Android Debug 开发测试签名，适合开发和测试；不能承诺该签名会用于长期升级。
 
 本版功能与验证范围见[发布说明](docs/RELEASE-v0.3.2.md)。七风格对照、白马累计微调与[第三版介绍片](docs/PROMO-V3-AUDIT.md)保留为早期候选的研究记录，不能当作v12默认效果；视频没有作为本次发布附件。AI生成输入与Android实际输出分别标注，历史胶片参考为异场景风格对照，不是严格色彩标定。默认风格保留上游材料模型，片屿额外调色可在风格说明关闭。方法和局限见[胶片性格复核](docs/FILM-CHARACTER-AUDIT.md)。
 
