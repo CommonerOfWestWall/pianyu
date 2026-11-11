@@ -320,6 +320,9 @@ public:
     // math_mode string says so. Any GPU keeps its advertised limit, and
     // SPEKTRALAB_VULKAN_STRICT_LIMITS=1 keeps it here too.
     void probe_cpu_storage_range(std::string& detail) {
+        // Independent of the math-mode gate: a mobile unfused-FMA overlay
+        // must never turn this desktop CPU capacity test into a GPU allocation.
+        if (properties_.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU) return;
         if (const char* strict = std::getenv("SPEKTRALAB_VULKAN_STRICT_LIMITS"); strict && *strict == '1') return;
         const VkDeviceSize advertised = properties_.limits.maxStorageBufferRange;
         if (advertised >= 0xFFFFFFF0ull) return;

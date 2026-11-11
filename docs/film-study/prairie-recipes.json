@@ -1,0 +1,111 @@
+[
+  {
+    "id": "01-style",
+    "settings": {
+      "lookIndex": 3,
+      "strength": 1
+    }
+  },
+  {
+    "id": "02-tone",
+    "settings": {
+      "lookIndex": 3,
+      "strength": 1,
+      "exposure": -0.1,
+      "contrast": 0.06,
+      "warmth": 0.14,
+      "tint": -0.06,
+      "highlights": -0.2,
+      "shadows": 0.12,
+      "saturation": -0.03,
+      "fade": 0.03,
+      "grain": 0
+    }
+  },
+  {
+    "id": "03-color",
+    "settings": {
+      "lookIndex": 3,
+      "strength": 1,
+      "exposure": -0.1,
+      "contrast": 0.06,
+      "warmth": 0.14,
+      "tint": -0.06,
+      "highlights": -0.2,
+      "shadows": 0.12,
+      "saturation": -0.03,
+      "fade": 0.03,
+      "hsl": {
+        "blue": {
+          "hue": 0.15,
+          "saturation": 0.04,
+          "lightness": -0.63
+        },
+        "cyan": {
+          "hue": 0.28,
+          "saturation": 0.02,
+          "lightness": -0.5
+        },
+        "yellow": {
+          "hue": -0.04,
+          "saturation": -0.02,
+          "lightness": -0.08
+        },
+        "orange": {
+          "hue": 0,
+          "saturation": -0.08,
+          "lightness": -0.02
+        },
+        "green": {
+          "hue": -0.08,
+          "saturation": -0.3,
+          "lightness": -0.08
+        }
+      },
+      "grain": 0
+    }
+  },
+  {
+    "id": "04-grain",
+    "settings": {
+      "lookIndex": 3,
+      "strength": 1,
+      "exposure": -0.1,
+      "contrast": 0.06,
+      "warmth": 0.14,
+      "tint": -0.06,
+      "highlights": -0.2,
+      "shadows": 0.12,
+      "saturation": -0.03,
+      "fade": 0.03,
+      "hsl": {
+        "blue": {
+          "hue": 0.15,
+          "saturation": 0.04,
+          "lightness": -0.63
+        },
+        "cyan": {
+          "hue": 0.28,
+          "saturation": 0.02,
+          "lightness": -0.5
+        },
+        "yellow": {
+          "hue": -0.04,
+          "saturation": -0.02,
+          "lightness": -0.08
+        },
+        "orange": {
+          "hue": 0,
+          "saturation": -0.08,
+          "lightness": -0.02
+        },
+        "green": {
+          "hue": -0.08,
+          "saturation": -0.3,
+          "lightness": -0.08
+        }
+      },
+      "grain": 0.18
+    }
+  }
+]

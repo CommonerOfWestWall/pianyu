@@ -3,6 +3,7 @@
 #include <dlfcn.h>
 #include <jni.h>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -39,6 +40,18 @@ Api& api() { static Api value; return value; }
 std::string engine_error(spk_engine* engine, const char* fallback) {
     const char* message = api().error(engine); // Borrowed from the engine; never freed by this caller.
     return message && *message ? message : fallback;
+}
+std::string export_params(const char* params) {
+    std::string result(params ? params : "{}");
+    const auto end = result.find_last_of('}');
+    if (end == std::string::npos) return result;
+    size_t content = end;
+    while (content > 0 && (result[content - 1] == ' ' || result[content - 1] == '\n' ||
+        result[content - 1] == '\r' || result[content - 1] == '\t')) --content;
+    result.insert(end, content > 0 && result[content - 1] != '{'
+        ? ",\"striped\":true,\"strip_rows\":256"
+        : "\"striped\":true,\"strip_rows\":256");
+    return result;
 }
 struct Utf {
     JNIEnv* env; jstring value; const char* chars;
@@ -89,12 +102,16 @@ extern "C" JNIEXPORT jobject JNICALL Java_studio_pianyu_app_NativeCore_process(
             }
         }
         Utf json(env, params);
+        const std::string render_params = export_params(json.chars);
         spk_image image{rgb.data(), info.width, info.height, 3};
         char* reply = nullptr;
-        auto* raw = api().open(engine, &image, json.chars, &reply);
+        auto* raw = api().open(engine, &image, render_params.c_str(), &reply);
         if (reply) api().free_string(reply);
         if (!raw) throw std::runtime_error(engine_error(engine, "Could not open image session"));
         std::unique_ptr<spk_session, decltype(api().release)> session(raw, api().release);
+        // spk_image is borrowed only for spk_open (C ABI contract). Release the
+        // RGB staging array before spectral rendering and the output allocation.
+        std::vector<float>().swap(rgb);
         spk_result result{};
         struct ResultGuard { spk_result* value; ~ResultGuard() { api().free_result(value); } } guard{&result};
         if (api().render(session.get(), "full", &result) != SPK_OK)
@@ -123,5 +140,9 @@ extern "C" JNIEXPORT jobject JNICALL Java_studio_pianyu_app_NativeCore_process(
             }
         }
         return output;
+    } catch (const std::bad_alloc&) {
+        env->ThrowNew(env->FindClass("java/lang/IllegalStateException"),
+            "Native image allocation failed (std::bad_alloc)");
+        return nullptr;
     } catch (const std::exception& e) { fail(env, e); return nullptr; }
 }

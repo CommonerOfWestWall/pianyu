@@ -1,0 +1,91 @@
+[
+  {
+    "id": "01-style",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1
+    }
+  },
+  {
+    "id": "02-tone",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "exposure": 0,
+      "contrast": 0.2,
+      "warmth": 0.12,
+      "tint": 0.02,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "saturation": 0.06,
+      "fade": 0.02,
+      "grain": 0
+    }
+  },
+  {
+    "id": "03-color",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "exposure": 0,
+      "contrast": 0.2,
+      "warmth": 0.12,
+      "tint": 0.02,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "saturation": 0.06,
+      "fade": 0.02,
+      "grain": 0,
+      "hsl": {
+        "orange": {
+          "hue": -0.03,
+          "saturation": -0.08,
+          "lightness": 0.05
+        },
+        "blue": {
+          "hue": 0.12,
+          "saturation": 0.1,
+          "lightness": -0.1
+        },
+        "green": {
+          "hue": -0.2,
+          "saturation": -0.25,
+          "lightness": -0.1
+        }
+      }
+    }
+  },
+  {
+    "id": "04-grain",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "exposure": 0,
+      "contrast": 0.2,
+      "warmth": 0.12,
+      "tint": 0.02,
+      "highlights": -0.12,
+      "shadows": -0.08,
+      "saturation": 0.06,
+      "fade": 0.02,
+      "grain": 0.18,
+      "hsl": {
+        "orange": {
+          "hue": -0.03,
+          "saturation": -0.08,
+          "lightness": 0.05
+        },
+        "blue": {
+          "hue": 0.12,
+          "saturation": 0.1,
+          "lightness": -0.1
+        },
+        "green": {
+          "hue": -0.2,
+          "saturation": -0.25,
+          "lightness": -0.1
+        }
+      }
+    }
+  }
+]

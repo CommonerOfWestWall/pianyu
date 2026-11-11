@@ -2,7 +2,7 @@
 
 ## 发布定位
 
-0.3.1 是可公开审阅的 Android arm64 测试版，面向 Android 10 及以上。下载入口为 [GitHub Releases](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.1)；APK 约 12.7 MB。附有约 90 秒的 1080p 中文介绍短片、字幕和校验和，配音由本地 IndexTTS 使用“董国鑫改1”音色合成。短片是原创静物、说明卡片和真实控件局部剪辑，不是完整操作录屏。
+0.3.1 是可公开审阅的 Android arm64 测试版，面向 Android 10 及以上。下载入口为 [GitHub Releases](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.1)；APK 约 12.7 MB。附有约 90 秒的 1080p 中文介绍短片、字幕和校验和，配音由本地语音合成工具生成。短片是原创静物、说明卡片和真实控件局部剪辑，不是完整操作录屏。
 
 ## 本版内容
 

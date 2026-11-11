@@ -19,7 +19,7 @@ class HslDeviceTest {
 
     @Test fun zeroHslIsExactIdentityAndAlphaIsPreserved() {
         val source = bitmap(0x00112233, 0x80445566.toInt(), 0xff778899.toInt())
-        val result = PhotoIO.finish(source, source, EditSettings(strength = 1f))
+        val result = PhotoIO.finish(source, source, EditSettings(strength = 1f, lookVersion = 0))
         assertEquals(source.width, result.width)
         val a = IntArray(3); val b = IntArray(3); source.getPixels(a, 0, 3, 0, 0, 3, 1); result.getPixels(b, 0, 3, 0, 0, 3, 1)
         assertTrue(a.contentEquals(b))
@@ -27,7 +27,7 @@ class HslDeviceTest {
 
     @Test fun redEditDoesNotChangeRemoteBlueAndGrayStaysNeutral() {
         val source = bitmap(0xffff3030.toInt(), 0xffaaa0d2.toInt(), 0xff808080.toInt())
-        val settings = EditSettings(strength = 1f, hsl = HslSettings(red = HslChannel(hue = .8f, saturation = .8f)))
+        val settings = EditSettings(strength = 1f, lookVersion = 0, hsl = HslSettings(red = HslChannel(hue = .8f, saturation = .8f)))
         val result = PhotoIO.finish(source, source, settings)
         val pixels = IntArray(3); result.getPixels(pixels, 0, 3, 0, 0, 3, 1)
         assertNotEquals(source.getPixel(0, 0), pixels[0])

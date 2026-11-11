@@ -48,9 +48,13 @@ class LibraryStore(context: Context) {
 }
 
 fun settingsToJson(s: EditSettings): JSONObject = JSONObject().apply {
+    put("lookVersion", s.lookVersion)
     put("lookIndex", s.lookIndex); put("strength", s.strength); put("brightness", s.brightness)
     put("warmth", s.warmth); put("grain", s.grain); put("cropAspect", s.cropAspect)
     put("exposure", s.exposure); put("contrast", s.contrast); put("saturation", s.saturation)
+    put("filmExposure", s.filmExposure)
+    put("autoFilmExposure", s.autoFilmExposure)
+    put("autoFilmExposureMethod", s.autoFilmExposureMethod)
     put("highlights", s.highlights); put("shadows", s.shadows); put("fade", s.fade)
     put("tint", s.tint); put("sharpen", s.sharpen); put("vignette", s.vignette)
     put("crop", JSONArray(listOf(s.crop.left, s.crop.top, s.crop.right, s.crop.bottom)))
@@ -79,9 +83,17 @@ fun settingsFromJson(j: JSONObject?): EditSettings {
     fun coordinate(index: Int, default: Float): Float = rect?.optDouble(index, default.toDouble())
         ?.toFloat()?.takeIf { it.isFinite() } ?: default
     return EditSettings(lookIndex = j.optInt("lookIndex").coerceIn(Looks.indices),
+        // A JSON object without the field is an old persisted recipe. A null
+        // object means a new settings value and is handled above.
+        lookVersion = j.optInt("lookVersion", 0).coerceIn(0, 3),
         strength = number("strength", .65f).coerceIn(0f, 1f), brightness = number("brightness").coerceIn(-1f, 1f),
         warmth = number("warmth").coerceIn(-1f, 1f), grain = number("grain").coerceIn(0f, 1f),
         cropAspect = number("cropAspect").coerceAtLeast(0f), exposure = number("exposure").coerceIn(-2f, 2f),
+        filmExposure = number("filmExposure").coerceIn(-2f, 2f),
+        autoFilmExposure = j.optBoolean("autoFilmExposure", false),
+        autoFilmExposureMethod = j.optString("autoFilmExposureMethod",
+            if (j.optBoolean("autoFilmExposure", false)) "center_weighted" else "protect_highlights")
+            .takeIf { it in setOf("center_weighted", "balanced", "protect_highlights") } ?: "protect_highlights",
         contrast = number("contrast").coerceIn(-1f, 1f), saturation = number("saturation").coerceIn(-1f, 1f),
         highlights = number("highlights").coerceIn(-1f, 1f), shadows = number("shadows").coerceIn(-1f, 1f),
         fade = number("fade").coerceIn(0f, 1f), tint = number("tint").coerceIn(-1f, 1f),

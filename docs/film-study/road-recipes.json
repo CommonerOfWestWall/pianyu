@@ -1,0 +1,98 @@
+[
+  {
+    "id": "01-style",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1
+    }
+  },
+  {
+    "id": "02-tone",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "warmth": 0.32,
+      "tint": -0.18,
+      "exposure": -0.05,
+      "contrast": 0.23,
+      "highlights": -0.18,
+      "shadows": 0.08,
+      "saturation": 0.05,
+      "grain": 0
+    }
+  },
+  {
+    "id": "03-color",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "warmth": 0.32,
+      "tint": -0.18,
+      "exposure": -0.05,
+      "contrast": 0.23,
+      "highlights": -0.18,
+      "shadows": 0.08,
+      "saturation": 0.05,
+      "grain": 0,
+      "hsl": {
+        "blue": {
+          "hue": -0.55,
+          "saturation": -0.05,
+          "lightness": -0.1
+        },
+        "cyan": {
+          "hue": -0.2,
+          "saturation": -0.1,
+          "lightness": -0.05
+        },
+        "green": {
+          "hue": -0.3,
+          "saturation": -0.2,
+          "lightness": -0.08
+        },
+        "yellow": {
+          "hue": 0.08,
+          "saturation": 0.1,
+          "lightness": -0.03
+        }
+      }
+    }
+  },
+  {
+    "id": "04-grain",
+    "settings": {
+      "lookIndex": 5,
+      "strength": 1,
+      "warmth": 0.32,
+      "tint": -0.18,
+      "exposure": -0.05,
+      "contrast": 0.23,
+      "highlights": -0.18,
+      "shadows": 0.08,
+      "saturation": 0.05,
+      "grain": 0.22,
+      "hsl": {
+        "blue": {
+          "hue": -0.55,
+          "saturation": -0.05,
+          "lightness": -0.1
+        },
+        "cyan": {
+          "hue": -0.2,
+          "saturation": -0.1,
+          "lightness": -0.05
+        },
+        "green": {
+          "hue": -0.3,
+          "saturation": -0.2,
+          "lightness": -0.08
+        },
+        "yellow": {
+          "hue": 0.08,
+          "saturation": 0.1,
+          "lightness": -0.03
+        }
+      }
+    }
+  }
+]

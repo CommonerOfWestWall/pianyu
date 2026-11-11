@@ -21,16 +21,65 @@ class LibraryDeviceTest {
     private val testContext get() = instrumentation.context
 
     @Test
+    fun finishingDecodeDoesNotEraseNativeCrashCheckpoint() {
+        val application = IsolatedTestApplication.create(target)
+        val decode = ProcessingDiagnostics(application)
+        val native = ProcessingDiagnostics(application, nativeCheckpoint = true)
+        try {
+            native.checkpoint(ProcessingStage.PREVIEW, 240, 180, "daily")
+            decode.checkpoint(ProcessingStage.DECODE)
+            decode.finished()
+            val report = native.record(ProcessingStage.PREVIEW, IllegalStateException("test marker"))
+            assertTrue(report.contains("checkpointWidth=240"))
+            assertTrue(report.contains("checkpointHeight=180"))
+            assertTrue(report.contains("checkpointLook=daily"))
+            assertEquals(report, decode.lastReport())
+        } finally { decode.finished(); native.finished(); application.cleanup() }
+    }
+
+    @Test
+    fun libraryShowsAnExplicitOriginalThumbnailAndEndsFailedLoads() {
+        val application = IsolatedTestApplication.create(target)
+        try {
+            val model = EditorModel(application)
+            awaitRestored(model)
+            val uri = fixtureUri("demo.jpg", "thumb-${UUID.randomUUID()}")
+            onMain { model.importPhotos(listOf(uri), openSingle = false) }
+            awaitImport(model, 1)
+            val photo = readLibrary(model).entries.single()
+            onMain { model.requestLibraryThumbnail(photo.id) }
+            poll(15_000L) { photo.id in readLibrary(model).thumbnails &&
+                photo.id !in readLibrary(model).thumbnailLoading }
+            val library = readLibrary(model)
+            assertTrue(photo.id in library.originalThumbnails)
+            val expected = PhotoIO.decode(application, uri, 240)
+            try { assertTrue(expected.sameAs(library.thumbnails.getValue(photo.id))) }
+            finally { expected.recycle() }
+            assertFalse("raw thumbnail must not become an edited cache", LibraryStore(application).thumbnail(photo.id, photo.settings).exists())
+
+            val unreadable = fixtureUri("demo.jpg", "empty-${UUID.randomUUID()}", create = true)
+            onMain { model.importPhotos(listOf(unreadable), openSingle = false) }
+            awaitImport(model, 2)
+            val failedId = readLibrary(model).entries.first { it.id != photo.id }.id
+            onMain { model.requestLibraryThumbnail(failedId) }
+            poll(15_000L) { val current = readLibrary(model)
+                failedId in current.thumbnailErrors && failedId !in current.thumbnailLoading }
+            assertFalse(failedId in readLibrary(model).thumbnails)
+        } finally { application.cleanup() }
+    }
+
+    @Test
     fun storeRoundTripKeepsCompleteGeometryAndRecipeSemantics() {
         val application = IsolatedTestApplication.create(target)
         try {
         val geometry = EditSettings(cropAspect = 1.5f, crop = CropRect(.1f, .2f, .8f, .9f),
             quarterTurns = 3, straightenDegrees = -12f, flipHorizontal = true, flipVertical = true)
-        val color = EditSettings(lookIndex = 2, strength = .4f, exposure = 1.2f, contrast = -.3f,
+        val color = EditSettings(lookIndex = 2, strength = .4f, exposure = 1.2f, filmExposure = -.7f, contrast = -.3f,
             saturation = .7f, highlights = -.2f, shadows = .4f, fade = .3f, tint = -.5f,
             sharpen = .8f, vignette = .6f, brightness = .1f, warmth = -.2f, grain = .5f)
         val entry = PhotoEntry("one", "content://one", "one.jpg", geometry.copy(
             lookIndex = color.lookIndex, strength = color.strength, exposure = color.exposure,
+            filmExposure = color.filmExposure,
             contrast = color.contrast, saturation = color.saturation, highlights = color.highlights,
             shadows = color.shadows, fade = color.fade, tint = color.tint, sharpen = color.sharpen,
             vignette = color.vignette, brightness = color.brightness, warmth = color.warmth, grain = color.grain))
@@ -63,7 +112,14 @@ class LibraryDeviceTest {
         val originalGeometry = CropRect(.12f, .18f, .77f, .91f)
         val edited = readEditor(model).settings.copy(crop = originalGeometry, cropAspect = 1.3f,
             quarterTurns = 1, straightenDegrees = 8f, flipHorizontal = true, exposure = .8f, tint = -.3f)
-        onMain { model.edit(edited); model.finishAdjustment() }
+        onMain {
+            model.requestLibraryThumbnail(firstId)
+            assertTrue(firstId in model.library.thumbnailLoading)
+            model.edit(edited); model.finishAdjustment()
+            assertFalse(firstId in model.library.thumbnailLoading)
+            assertFalse(firstId in model.library.thumbnailErrors)
+            assertFalse(firstId in model.library.originalThumbnails)
+        }
         awaitEditor(model)
         onMain { model.copyRecipe(); model.backToLibrary() }
         awaitLibrary(model)

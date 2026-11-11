@@ -17,12 +17,33 @@ object NativeCore {
     private external fun create(path: String): Long
     private external fun process(handle: Long, source: Bitmap, params: String): Bitmap
 
-    fun render(context: Context, source: Bitmap, look: Look, grain: Float = 0f): Bitmap {
-        warmup(context)
-        return process(handle, source, look.params(grain))
+    fun render(context: Context, source: Bitmap, look: Look, grain: Float = 0f, filmExposure: Float = 0f,
+        stage: ProcessingStage = ProcessingStage.PREVIEW, autoFilmExposure: Boolean = false,
+        autoFilmExposureMethod: String = "protect_highlights"): Bitmap {
+        if (handle == 0L) warmup(context)
+        return tracked(context, stage, source.width, source.height, look.id) {
+            process(handle, source, look.params(grain, filmExposure, autoFilmExposure, autoFilmExposureMethod))
+        }
     }
 
-    fun warmup(context: Context) {
+    fun warmup(context: Context) = tracked(context, ProcessingStage.ENGINE) { ensureEngine(context) }
+
+    // Called on the serialized engine dispatcher, including the disk checkpoint.
+    // A native crash cannot be caught by Kotlin; its last stage survives restart.
+    private fun <T> tracked(context: Context, stage: ProcessingStage, width: Int? = null,
+        height: Int? = null, look: String? = null, block: () -> T): T {
+        val diagnostics = ProcessingDiagnostics(context, nativeCheckpoint = true)
+        diagnostics.checkpoint(stage, width, height, look)
+        try { return block() }
+        catch (error: OutOfMemoryError) { throw ProcessingException(diagnostics.record(stage, error), error) }
+        catch (error: LinkageError) {
+            throw ProcessingException(diagnostics.record(stage, error), error)
+        }
+        catch (error: Exception) { throw ProcessingException(diagnostics.record(stage, error), error) }
+        finally { diagnostics.finished() }
+    }
+
+    private fun ensureEngine(context: Context) {
         val started = SystemClock.elapsedRealtime()
         if (!loaded) { System.loadLibrary("pianyu_jni"); loaded = true }
         if (handle == 0L) {

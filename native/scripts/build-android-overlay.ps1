@@ -6,7 +6,11 @@ $out = Join-Path $here 'build/android-arm64-v2'
 $engine = Join-Path (Resolve-Path (Join-Path $here '../engine-practice/SpektraLab/engine')).Path ''
 $overlay = Join-Path $out 'android-overlay-vulkan_gpu.cpp'
 $text = Get-Content (Join-Path $engine 'src/gpu/vulkan_gpu.cpp') -Raw
-$text = $text.Replace('properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU','true /* verified Android unfused GPU */')
+$gate = 'if (zero && !exact && properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU) {'
+if (([regex]::Matches($text, [regex]::Escape($gate))).Count -ne 1) { throw 'expected one unfused-FMA gate' }
+$text = $text.Replace($gate,'if (zero && !exact && true /* verified Android unfused GPU */) {')
+if (([regex]::Matches($text, [regex]::Escape('probe_cpu_storage_range(detail);'))).Count -ne 1) { throw 'expected one desktop storage probe call' }
+$text = $text.Replace('probe_cpu_storage_range(detail);','/* Android retains the advertised storage limit; no desktop capacity probe. */')
 $text = $text.Replace('Vulkan probe passed on a CPU device with unfused fma','Vulkan probe passed on an Android GPU with unfused fma')
 Set-Content -LiteralPath $overlay -Value $text -NoNewline
 $ndk='C:/android_sdk/ndk/28.2.13676358'; $clang=Join-Path $ndk 'toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe'; $sys=Join-Path $ndk 'toolchains/llvm/prebuilt/windows-x86_64/sysroot'; $b=Join-Path $out 'engine'

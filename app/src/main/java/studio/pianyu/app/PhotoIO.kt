@@ -28,13 +28,37 @@ object PhotoIO {
         val source = if (uri != null) ImageDecoder.createSource(context.contentResolver, uri)
         else ImageDecoder.createSource(ByteBuffer.wrap(context.assets.open("demo.jpg").use { it.readBytes() }))
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            val requestedEdge = edge.coerceAtMost(2048).coerceAtLeast(1)
-            val scale = minOf(1.0, requestedEdge.toDouble() / maxOf(info.size.width, info.size.height))
-            decoder.setTargetSize((info.size.width * scale).roundToInt().coerceAtLeast(1),
-                (info.size.height * scale).roundToInt().coerceAtLeast(1))
+            // A non-positive edge means original dimensions.  Preview callers pass 960;
+            // exports may pass 0 and must never be silently capped at 2048.
+            if (edge > 0) {
+                val scale = minOf(1.0, edge.toDouble() / maxOf(info.size.width, info.size.height))
+                decoder.setTargetSize((info.size.width * scale).roundToInt().coerceAtLeast(1),
+                    (info.size.height * scale).roundToInt().coerceAtLeast(1))
+            }
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             decoder.setTargetColorSpace(ColorSpace.get(ColorSpace.Named.SRGB))
-        }.let { if (it.config == Bitmap.Config.ARGB_8888) it else it.copy(Bitmap.Config.ARGB_8888, false) }
+        }.let { decoded ->
+            if (decoded.config == Bitmap.Config.ARGB_8888) decoded
+            else try { decoded.copy(Bitmap.Config.ARGB_8888, false) }
+            finally { decoded.recycle() } // Private intermediate, never handed to Compose.
+        }
+    }
+
+    fun shareSource(context: Context, uri: Uri): Uri {
+        val directory = File(context.cacheDir, "exports").apply { mkdirs() }
+        directory.listFiles()?.filter { it.name.startsWith("Pianyu_source_") &&
+            it.lastModified() < System.currentTimeMillis() - 86_400_000L }?.forEach { it.delete() }
+        val suffix = when (context.contentResolver.getType(uri)) {
+            "image/png" -> "png"
+            "image/heic", "image/heif" -> "heic"
+            else -> "jpg"
+        }
+        val file = File(directory, "Pianyu_source_${System.currentTimeMillis()}.$suffix")
+        context.contentResolver.openInputStream(uri).use { input ->
+            checkNotNull(input) { "无法读取原片" }
+            file.outputStream().use { output -> input.copyTo(output) }
+        }
+        return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
     }
 
     fun crop(source: Bitmap, aspect: Float): Bitmap {
@@ -56,12 +80,13 @@ object PhotoIO {
     }
 
     fun finish(original: Bitmap, filtered: Bitmap, settings: EditSettings): Bitmap {
+        val strength = Looks[settings.lookIndex].filmStrength(settings)
         val blended = when {
-            settings.strength <= 0f -> original.copy(Bitmap.Config.ARGB_8888, false)
-            settings.strength >= 1f -> filtered.copy(Bitmap.Config.ARGB_8888, false)
-            else -> blend(original, filtered, settings.strength)
+            strength <= 0f -> original.copy(Bitmap.Config.ARGB_8888, false)
+            strength >= 1f -> filtered.copy(Bitmap.Config.ARGB_8888, false)
+            else -> blend(original, filtered, strength)
         }
-        val adjusted = applyAdjustments(blended, settings)
+        val adjusted = applyAdjustments(blended, Looks[settings.lookIndex].finishSettings(settings))
         if (adjusted !== blended) blended.recycle()
         val result = PhotoGeometry.apply(adjusted, settings)
         if (result !== adjusted) adjusted.recycle()
@@ -91,9 +116,9 @@ object PhotoIO {
             || !settings.hsl.isZero()
         if (!hasAdjustments) return source
         val width = source.width; val height = source.height
-        val input = IntArray(width * height)
-        source.getPixels(input, 0, width, 0, 0, width, height)
-        val output = input.copyOf()
+        val bandRows = minOf(64, height)
+        val output = IntArray(width * bandRows)
+        val adjusted = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val exposure = Math.pow(2.0, settings.exposure.coerceIn(-2f, 2f).toDouble()).toFloat()
         val contrast = 1f + settings.contrast.coerceIn(-1f, 1f)
         val saturation = 1f + settings.saturation.coerceIn(-1f, 1f)
@@ -103,8 +128,12 @@ object PhotoIO {
         val fade = settings.fade.coerceIn(0f, 1f)
         val hsl = if (settings.hsl.isZero()) settings.hsl else settings.hsl.bounded()
         val hslActive = !hsl.isZero()
-        for (y in 0 until height) for (x in 0 until width) {
-            val i = y * width + x; val p = input[i]; val alpha = p ushr 24
+        for (top in 0 until height step bandRows) {
+        val rows = minOf(bandRows, height - top)
+        source.getPixels(output, 0, width, 0, top, width, rows)
+        for (row in 0 until rows) for (x in 0 until width) {
+            val y = top + row
+            val i = row * width + x; val p = output[i]; val alpha = p ushr 24
             var r = ((p shr 16) and 255).toFloat(); var g = ((p shr 8) and 255).toFloat(); var b = (p and 255).toFloat()
             r *= exposure; g *= exposure; b *= exposure
             val lum = (r * .299f + g * .587f + b * .114f)
@@ -180,52 +209,79 @@ object PhotoIO {
             output[i] = (alpha shl 24) or (r.roundToInt().coerceIn(0, 255) shl 16) or
                 (g.roundToInt().coerceIn(0, 255) shl 8) or b.roundToInt().coerceIn(0, 255)
         }
-        if (settings.sharpen > 0f) sharpen(output, width, height, settings.sharpen.coerceIn(0f, 1f))
-        return Bitmap.createBitmap(output, width, height, Bitmap.Config.ARGB_8888)
+        adjusted.setPixels(output, 0, width, 0, top, width, rows)
+        }
+        if (settings.sharpen <= 0f) return adjusted
+        val sharpened = sharpen(adjusted, settings.sharpen.coerceIn(0f, 1f))
+        adjusted.recycle()
+        return sharpened
     }
 
-    private fun sharpen(pixels: IntArray, width: Int, height: Int, amount: Float) {
-        val input = pixels.copyOf()
-        for (y in 1 until height - 1) for (x in 1 until width - 1) {
-            val i = y * width + x; val p = input[i]
+    private fun sharpen(source: Bitmap, amount: Float): Bitmap {
+        val width=source.width; val height=source.height
+        val result=source.copy(Bitmap.Config.ARGB_8888, true)
+        val input=IntArray(width * 3)
+        val output=IntArray(width)
+        for (y in 1 until height - 1) {
+        source.getPixels(input,0,width,0,y-1,width,3)
+        input.copyInto(output,0,width,width*2)
+        for (x in 1 until width - 1) {
+            val i = width + x; val p = input[i]
             fun channel(shift: Int): Int {
                 val center = (p shr shift) and 255
                 val avg = (((input[i - 1] shr shift) and 255) + ((input[i + 1] shr shift) and 255) +
                     ((input[i - width] shr shift) and 255) + ((input[i + width] shr shift) and 255)) / 4
                 return (center + (center - avg) * amount).roundToInt().coerceIn(0, 255)
             }
-            pixels[i] = (p and -0x1000000) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+            output[x] = (p and -0x1000000) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
         }
+        result.setPixels(output,0,width,0,y,width,1)
+        }
+        return result
     }
 
-    fun save(context: Context, bitmap: Bitmap, share: Boolean): Uri {
-        val name = "Pianyu_${System.currentTimeMillis()}_${System.nanoTime()}.jpg"
+    fun save(context: Context, bitmap: Bitmap, share: Boolean, lossless: Boolean = false,
+        format: ExportFormat = if (lossless) ExportFormat.PNG else ExportFormat.JPEG): Uri {
+        val rasterFormat = if (format == ExportFormat.PNG) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
+        val name = "Pianyu_${System.currentTimeMillis()}_${System.nanoTime()}.${format.suffix}"
+        val temp = if (format == ExportFormat.HEIF) File.createTempFile("Pianyu_", ".heic", context.cacheDir) else null
+        fun encodeTo(output: java.io.OutputStream) {
+            if (format == ExportFormat.HEIF) error("HEIF requires a file target")
+            check(bitmap.compress(rasterFormat, 100, output)) { "照片写入失败" }
+        }
+        try { if (temp != null) HeifExport.encode(bitmap, temp) }
+        catch (error: Throwable) { temp?.delete(); throw error }
         if (share) {
             val directory = File(context.cacheDir, "exports").apply { mkdirs() }
             // Only our own disposable exports are removed; imported originals are untouched.
             directory.listFiles()?.filter { it.lastModified() < System.currentTimeMillis() - 86_400_000L }
                 ?.forEach { it.delete() }
             val file = File(directory, name)
-            file.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it)) }
-            return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+            try {
+                if (temp != null) temp.inputStream().use { input -> file.outputStream().use { input.copyTo(it) } }
+                else file.outputStream().use(::encodeTo)
+                return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+            } catch (error: Throwable) { file.delete(); throw error } finally { temp?.delete() }
         }
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.MIME_TYPE, format.mime)
             put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/片屿")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
-        val uri = checkNotNull(resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values))
         try {
-            checkNotNull(resolver.openOutputStream(uri)).use {
-                check(bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it)) { "照片写入失败" }
+            val uri = checkNotNull(resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values))
+            try {
+                checkNotNull(resolver.openOutputStream(uri)).use { output ->
+                    if (temp != null) temp.inputStream().use { it.copyTo(output) } else encodeTo(output)
+                }
+                resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+                return uri
+            } catch (e: Throwable) {
+                runCatching { resolver.delete(uri, null, null) }
+                throw e
             }
-            resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
-            return uri
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            throw e
-        }
+        } finally { temp?.delete() }
     }
 }
