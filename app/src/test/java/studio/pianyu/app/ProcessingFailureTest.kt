@@ -12,7 +12,7 @@ class ProcessingFailureTest {
         assertEquals(ProcessingFailureKind.ALLOCATION, ProcessingFailure.classify(RuntimeException("VK_ERROR_OUT_OF_DEVICE_MEMORY (-2)")))
         assertEquals(ProcessingFailureKind.ALLOCATION, ProcessingFailure.classify(RuntimeException("wrapper", OutOfMemoryError("heap"))))
         assertEquals(ProcessingFailureKind.ALLOCATION, ProcessingFailure.classify(RuntimeException("Vulkan buffer memory failed (VkResult -2)")))
-        assertEquals(ProcessingFailureKind.OTHER, ProcessingFailure.classify(RuntimeException("VK_ERROR_DEVICE_LOST (-4)")))
+        assertEquals(ProcessingFailureKind.DEVICE_LOST, ProcessingFailure.classify(RuntimeException("VK_ERROR_DEVICE_LOST (-4)")))
         assertEquals(ProcessingFailureKind.OTHER, ProcessingFailure.classify(RuntimeException("GPU capability unsupported")))
         assertEquals(ProcessingFailureKind.OTHER, ProcessingFailure.classify(RuntimeException("unsupported memorytype")))
         assertEquals(ProcessingFailureKind.OTHER, ProcessingFailure.classify(RuntimeException("result=-1")))

@@ -7,9 +7,23 @@
 ```powershell
 # 在本目录，配置 JDK17 和 ANDROID_HOME，路径需为 ASCII
 ../../gradlew.bat -p . assembleDebug
-adb install -r -t build/outputs/apk/debug/PianyuReleaseVerifier-debug.apk
+adb install -r -t -d build/outputs/apk/debug/PianyuReleaseVerifier-debug.apk
 adb shell am instrument -w -e mode public-smoke studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
 adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence
+```
+
+批量 UI 验收使用显式 `batch-ui` 模式。它只操作片屿库中已有条目，不打开系统相册；要求选中数量在 1–30 张之间，选择原尺寸 JPEG，等待“批量保存完成：已保存 n 张，失败 0 张”，校验本应用所有者且名称以 `Pianyu_` 开头的新 MediaStore 输出可读并记录尺寸，随后删除仅本次新增的这些输出，最后关闭结果并取消选择。截图和报告写入私有目录 `private-batch-release-v14`：
+
+```powershell
+adb shell am instrument -w -e mode batch-ui studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
+adb pull /sdcard/Android/data/studio.pianyu.app/files/private-batch-release-v14
+```
+
+显式 `film-print-ui` 模式只打开公开内置示例，不导出、不读取私人条目：通过实际 UI 验收胶片曝光的四种自动测光方式、自动测光开关、相纸与印放、Kodak Ultra Endura、Fujifilm Crystal Archive Type II、印放曝光 +0.4 EV 与恢复推荐，并进入自然正片确认“正片直接扫描 · 不经过相纸”，最后恢复日常暖色推荐。截图和报告写入独立目录 `release-evidence-v14-ui`：
+
+```powershell
+adb shell am instrument -w -e mode film-print-ui studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
+adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence-v14-ui
 ```
 
 工具沿用开发测试包名 `studio.pianyu.app.test`，会替换普通 androidTest APK；重新运行 JUnit 测试前应重新安装普通测试 APK。验收覆盖示例→调整面板→1:1裁切→保存→分享选择器→系统选图→返回。它只点击片屿内部按钮，不选择接收应用或私人照片，截图仅保存片屿页面，输出在片屿的 external files `release-evidence/`。完成会写 `PASS` 或具体失败原因。
@@ -20,7 +34,7 @@ adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence
 
 新工具截图目录为 `release-evidence-v02/`，不会混用0.1证据。流程：照片库示例→调色→自由裁切/比例/旋转/镜像/校平→风格参考→复制配方→保存→系统分享（不选接收人）→照片库多选套用→系统多选相册（不选私人照片）→返回。
 
-触摸拖角通过 UiAutomation 注入，若系统拦截会在报告记录 false；这与语义按钮验证分开。真实裁切数学、配方保留、批量JPG/HEIF输出和异常继续由普通 androidTest 额外验证。AndroidTest APK版本码0，framework验收工具版本码1，反向安装需先卸载纯测试包 `studio.pianyu.app.test`，不要卸载生产应用 `studio.pianyu.app`。
+触摸拖角通过 UiAutomation 注入，若系统拦截会在报告记录 false；这与语义按钮验证分开。真实裁切数学、配方保留、批量JPG/HEIF输出和异常继续由普通 androidTest 额外验证。AndroidTest APK版本码0，framework验收工具版本码1；更新工具使用 `adb install -r -t -d`，不要卸载生产应用 `studio.pianyu.app`。
 
 ## 0.3验收流程
 

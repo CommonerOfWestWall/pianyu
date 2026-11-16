@@ -15,15 +15,26 @@ object NativeCore {
     private var loaded = false
 
     private external fun create(path: String): Long
+    private external fun destroy(handle: Long)
     private external fun process(handle: Long, source: Bitmap, params: String): Bitmap
 
     fun render(context: Context, source: Bitmap, look: Look, grain: Float = 0f, filmExposure: Float = 0f,
         stage: ProcessingStage = ProcessingStage.PREVIEW, autoFilmExposure: Boolean = false,
-        autoFilmExposureMethod: String = "protect_highlights"): Bitmap {
+        autoFilmExposureMethod: String = "protect_highlights", printStock: String = "",
+        printExposure: Float = 0f): Bitmap {
         if (handle == 0L) warmup(context)
         return tracked(context, stage, source.width, source.height, look.id) {
-            process(handle, source, look.params(grain, filmExposure, autoFilmExposure, autoFilmExposureMethod))
+            retryLostDevice(invalidate = ::discardLostEngine) {
+                if (handle == 0L) ensureEngine(context)
+                process(handle, source, look.params(grain, filmExposure, autoFilmExposure, autoFilmExposureMethod, printStock, printExposure))
+            }
         }
+    }
+
+    private fun discardLostEngine() {
+        val lost = handle; handle = 0L
+        Log.w("PianyuCore", "Vulkan device lost; discarding engine before retry/next photo")
+        if (lost != 0L) destroy(lost)
     }
 
     fun warmup(context: Context) = tracked(context, ProcessingStage.ENGINE) { ensureEngine(context) }

@@ -1,18 +1,20 @@
-# 片屿 Pianyu 0.3.2
+# 片屿 Pianyu
 
 片屿是一款面向 Android 手机 JPG / HEIF 的本地胶片照片编辑器：在设备上完成选片、胶片风格、基础调色、构图和导出，不上传照片。
 
 ![片屿标记](docs/images/icon.png)
 
-> 0.3.2（versionCode 12）公开预发布版：Android 10+、arm64。新照片默认先做胶片前自动测光、推荐强度75，100提供更强的创作余量；旧编辑保留原效果。依据、上游源码与实测方法见[默认工作流](docs/DEFAULT-WORKFLOW-v11.md)。v10修复Android误执行桌面大缓冲实验后，用户已反馈OPPO恢复正常；本地最终真机验证使用Redmi K80 Pro，其他设备仍需测试。
+> 0.3.3-preview2（versionCode 14）公开测试版：Android 10+、arm64。修复GPU设备失效后的批量连锁失败，增加导入进度和仅重试失败项；手动调色新增测光方式、相纸与印放曝光。保持推荐强度75、轻颗粒和保护高光自动测光；旧编辑保留原效果。本地真机验证使用Redmi K80 Pro，其他设备仍需测试。
 
 v12新增保留构图、可撤销的“重置此风格调色”，以及不经JPEG中间文件的HEIF导出（当前为8-bit sRGB SDR）。使用方法与实际验证见[推荐起点与HEIF](docs/HEIF-AND-RECOMMENDED-v12.md)。
 
+v14首页仍是七个推荐搭配，手动调色提供四种测光意图、相纸/电影拷贝片和独立印放曝光。相近相纸收进“更多相纸”，正片扫描不显示无效相纸控制。依据是固定上游版本的同图原生引擎实验，见[实测结论与验证范围](docs/METERING-PRINT-STUDY-v13.md)；这不是胶片准确率认证。批量处理保持原尺寸与原参数，不通过关闭颗粒、测光或静默缩图掩盖错误，见[批量处理调查](docs/BATCH-PIPELINE-v14.md)。
+
 ## 下载
 
-0.3.2 是公开预发布版：[Release 页面](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.2)。直接下载：[pianyu-0.3.2-v12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.2/pianyu-0.3.2-v12-arm64.apk)；源码包：[v0.3.2 完整源码（ZIP）](https://github.com/CommonerOfWestWall/pianyu/archive/refs/tags/v0.3.2.zip)。Release 构建使用既有 Android Debug 开发测试签名，适合开发和测试；不能承诺该签名会用于长期升级。
+当前公开测试版：[v0.3.3-preview2 Release 页面](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.3-preview2)。直接下载：[pianyu-0.3.3-preview2-v14-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.3-preview2/pianyu-0.3.3-preview2-v14-arm64.apk)（约12.17 MiB）；源码包：[v0.3.3-preview2 完整源码（ZIP）](https://github.com/CommonerOfWestWall/pianyu/archive/refs/tags/v0.3.3-preview2.zip)。安装包与本地已验证的v14字节相同，同签名可覆盖安装。Release 构建使用既有 Android Debug 开发测试签名，适合开发和测试；不能承诺该签名会用于长期升级。历史版本[v0.3.2](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.2)继续保留。
 
-本版功能与验证范围见[发布说明](docs/RELEASE-v0.3.2.md)。七风格对照、白马累计微调与[第三版介绍片](docs/PROMO-V3-AUDIT.md)保留为早期候选的研究记录，不能当作v12默认效果；视频没有作为本次发布附件。AI生成输入与Android实际输出分别标注，历史胶片参考为异场景风格对照，不是严格色彩标定。默认风格保留上游材料模型，片屿额外调色可在风格说明关闭。方法和局限见[胶片性格复核](docs/FILM-CHARACTER-AUDIT.md)。
+本版功能与验证范围见[发布说明](docs/RELEASE-v0.3.3-preview2.md)。七风格对照、白马累计微调与[第三版介绍片](docs/PROMO-V3-AUDIT.md)保留为早期候选的研究记录，不能当作当前默认效果；视频没有作为本次发布附件。AI生成输入与Android实际输出分别标注，历史胶片参考为异场景风格对照，不是严格色彩标定。默认风格保留上游材料模型，片屿额外调色可在风格说明关闭。方法和局限见[胶片性格复核](docs/FILM-CHARACTER-AUDIT.md)。
 
 ## 名字与视觉
 
@@ -24,12 +26,13 @@ v12新增保留构图、可撤销的“重置此风格调色”，以及不经JP
 - 7 款风格入口：日常暖色、电影日光、夜色光晕、自然正片、浓彩风光、克制复古、柔和黑白。
 - 风格强度、曝光、亮度、对比、饱和、高光、阴影、色温、色调、褪色、颗粒、锐化和暗角；HSL 分色支持红、橙、黄、绿、青、蓝、紫、洋红八个色区。
 - 胶片曝光在胶片响应前以±2EV调节，直接使用上游模型；原曝光保留成片后的提亮作用。旧配方胶片曝光默认为0。已实际运行两个上游与片屿模型的同输入对照，见 [实验结果和边界](docs/UPSTREAM-PRACTICE-2026-11.md)。
-- 新照片默认开启保护高光自动测光，在“调色 → 胶片曝光”可直接关闭；推荐强度75与旧版推荐100等效（关闭测光比较），100进一步加强材料混合和额外预设。75不是准确率。旧配方不自动重新曝光。
+- 新照片默认开启保护高光自动测光，在“调色 → 胶片曝光”可直接关闭；v13可手动选择均衡、中心、保护高光或保护阴影。推荐强度75与旧版推荐100等效（关闭测光比较），100进一步加强材料混合和额外预设。75不是准确率。旧配方不自动重新曝光。
+- v13“调色 → 相纸与印放”保留推荐搭配，可更换兼容相纸/电影拷贝片，并独立调整±2EV印放曝光；支持撤销、配方保存和批量导出。正片直接扫描绕过相纸。选择另一风格会恢复该风格推荐冲印，其余手动调色保留。
 - 风格强度、基础调色和 HSL 数值点按后可直接输入；曝光显示两位小数，其他参数使用 UI 百分数，并按各自范围校验后应用。未改动输入时保留原始浮点值。
 - 裁切、移动裁切框、自由或锁定比例、左右 90° 旋转、水平/垂直镜像和 ±20° 校平。
 - 撤销/重做、原图对比、长按对比、双指缩放；预览完成后可恢复全图。
 - 复制/套用调色配方；命名配方可保存、应用、改名和删除，配方不包含几何构图。
-- 单张保存或分享；照片库多选后批量保存，显示进度和失败数，并可停止后续任务。编辑后可分享 JPEG、PNG 或设备支持时的 HEIF；另可直接分享原片，原片按源字节复制，保留原始元数据且不含编辑。
+- 单张保存或分享；照片库多选后批量保存，显示进度、结果和逐张失败原因，可以仅重试失败项或停止后续任务。编辑后可分享 JPEG、PNG 或设备支持时的 HEIF；另可直接分享原片，原片按源字节复制，保留原始元数据且不含编辑。
 - 默认按原尺寸导出 8-bit sRGB JPEG（质量 100，高质量但仍有损），也可选择长边 1080 或 2048；另可导出编辑后的 8-bit sRGB PNG，或设备支持时的 8-bit sRGB SDR HEIF。HEIF 使用 AndroidX HeifWriter 1.1.0 和设备 HEVC/HEIC 编码器，不经过 JPEG 中转。不放大更小原图，写入 `Pictures/片屿`，编辑后导出不保留定位/EXIF 等元数据。
 - 编辑预览长边约 960，预览尺寸不代表全分辨率输出。颗粒 UI 的 0–100 映射到引擎 0–2，拖动停顿约 120ms 后预览，松手提交；双指放大可观察颗粒，颗粒随风格强度变化。
 
@@ -85,6 +88,8 @@ Windows 工程路径需为 ASCII；若实际目录包含非 ASCII 字符，可�
 ## 已验证与限制
 
 v12在Redmi K80 Pro完成最终Release APK再安装验证，确认最终UI、HEIF原尺寸保存与分享；7项host tests、21项定向 Android tests、Release 构建、AndroidTest 编译和 lint（0 errors、32 warnings、1 hint）通过。JPG和HEIF原尺寸处理及PNG保存/读取通过。之前版本的宣传视频基于 versionCode 7，不代表v12默认效果。50MP、HDR和尚未覆盖的其他设备编码器仍需单独验证。
+
+v14通过16项host tests、17项定向Android测试，另完成18张连续原尺寸JPEG压力测试（6张各复制3份）及6张原尺寸HEIF导出。100张本地导入实际列表的首屏缩略图约2.01秒完成；主线程心跳不代表全程帧率。最终相同Release APK在Redmi K80 Pro通过实际UI保存原6张JPEG（全部4096×3072）、测光/相纸/印放与正片旁路检查。Debug/Release、AndroidTest编译和lint（0 errors、36 warnings、1 hint）通过；签名与本地v12一致。150张桌面受控实验及六组稳定版基线的条件见[研究报告](docs/METERING-PRINT-STUDY-v13.md)，驱动恢复和验证边界见[批量处理调查](docs/BATCH-PIPELINE-v14.md)。
 
 - 当前范围不是 VSCO 的全功能替代品；没有透视、曲线、蒙版、相机/视频、RAW、专业色彩管理、HDR 保真导出或后台批处理服务。
 - 本地GPU兼容性在Redmi K80 Pro / Adreno 830验证；OPPO Find X9有用户正常使用反馈。没有CPU后备渲染，不能保证所有GPU兼容。

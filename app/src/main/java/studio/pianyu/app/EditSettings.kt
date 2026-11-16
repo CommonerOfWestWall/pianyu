@@ -14,6 +14,10 @@ data class EditSettings(
     val autoFilmExposure: Boolean = true,
     // Stored with the recipe so a later default change cannot reinterpret it.
     val autoFilmExposureMethod: String = "protect_highlights",
+    // Empty follows the look's recommended print material. This exposure is
+    // measured in stops at the enlarger, not the CPU finishing exposure.
+    val printStock: String = "",
+    val printExposure: Float = 0f,
     val contrast: Float = 0f,
     val saturation: Float = 0f,
     val highlights: Float = 0f,
