@@ -55,6 +55,7 @@ fun settingsToJson(s: EditSettings): JSONObject = JSONObject().apply {
     put("filmExposure", s.filmExposure)
     put("autoFilmExposure", s.autoFilmExposure)
     put("autoFilmExposureMethod", s.autoFilmExposureMethod)
+    put("printStock", s.printStock); put("printExposure", s.printExposure)
     put("highlights", s.highlights); put("shadows", s.shadows); put("fade", s.fade)
     put("tint", s.tint); put("sharpen", s.sharpen); put("vignette", s.vignette)
     put("crop", JSONArray(listOf(s.crop.left, s.crop.top, s.crop.right, s.crop.bottom)))
@@ -93,7 +94,9 @@ fun settingsFromJson(j: JSONObject?): EditSettings {
         autoFilmExposure = j.optBoolean("autoFilmExposure", false),
         autoFilmExposureMethod = j.optString("autoFilmExposureMethod",
             if (j.optBoolean("autoFilmExposure", false)) "center_weighted" else "protect_highlights")
-            .takeIf { it in setOf("center_weighted", "balanced", "protect_highlights") } ?: "protect_highlights",
+            .takeIf { it in MeteringMethods } ?: "protect_highlights",
+        printStock = j.optString("printStock", "").takeIf { name -> PrintStocks.any { it.id == name } } ?: "",
+        printExposure = number("printExposure").coerceIn(-2f, 2f),
         contrast = number("contrast").coerceIn(-1f, 1f), saturation = number("saturation").coerceIn(-1f, 1f),
         highlights = number("highlights").coerceIn(-1f, 1f), shadows = number("shadows").coerceIn(-1f, 1f),
         fade = number("fade").coerceIn(0f, 1f), tint = number("tint").coerceIn(-1f, 1f),

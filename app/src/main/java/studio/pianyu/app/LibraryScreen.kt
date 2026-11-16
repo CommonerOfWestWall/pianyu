@@ -3,6 +3,8 @@ package studio.pianyu.app
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +24,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> Unit, about: () -> Unit) {
     val library=model.library
-    val busy=library.batch!=null
+    val busy=library.batch!=null||library.importing||library.restoring
     var confirmRemove by remember { mutableStateOf(false) }
     if(confirmRemove) AlertDialog(onDismissRequest={confirmRemove=false},title={Text("移出 ${library.selected.size} 张照片？")},
         text={Text("只清除片屿中的照片记录与编辑设置，手机相册里的原文件会保留。")},
@@ -38,15 +40,22 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
             TextButton(onClick=about) {Text("关于")}
             Button(onClick=pickPhoto,enabled=!busy&&!library.importing&&!library.restoring) {Text("导入")}
         }
-        if(library.restoring||library.importing) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if(library.restoring||library.importing) {
+            library.importProgress?.let { progress ->
+                Column(Modifier.fillMaxWidth().padding(horizontal=16.dp)) {
+                    Text("已读取 ${progress.completed} / ${progress.total}",color=WarmWhite,fontSize=12.sp)
+                    LinearProgressIndicator(progress={if(progress.total==0) 1f else progress.completed.toFloat()/progress.total},modifier=Modifier.fillMaxWidth())
+                }
+            } ?: LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
         if(library.entries.isEmpty()) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                 Text("让日常，有一点胶片的味道。",fontSize=22.sp,color=WarmWhite,fontFamily=Serif)
                 Spacer(Modifier.height(16.dp))
                 Text("一次选多张，在照片库里慢慢挑。\n调好一张，复制配方，批量保存。",color=WarmWhite.copy(alpha=.65f),lineHeight=25.sp)
                 Spacer(Modifier.height(28.dp))
-                Button(onClick=pickPhoto,enabled=!library.restoring) {Text("从相册导入 · 支持多选")}
-                TextButton(onClick=model::loadDemo,enabled=!library.restoring) {Text("试用示例")}
+                Button(onClick=pickPhoto,enabled=!busy) {Text("从相册导入 · 支持多选")}
+                TextButton(onClick=model::loadDemo,enabled=!busy) {Text("试用示例")}
             }
         } else {
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -84,6 +93,20 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text("导出时请保持应用打开",fontSize=12.sp,modifier=Modifier.weight(1f),color=WarmWhite.copy(alpha=.6f))
                     TextButton(onClick=model::stopBatch,enabled=!batch.stopping) {Text(if(batch.stopping)"本张完成后停止" else "停止")}
+                }
+            }
+        }
+        library.lastBatch?.let { result ->
+            Column(Modifier.fillMaxWidth().background(Color(0xFF30322D)).padding(16.dp)) {
+                Text("${if(result.canceled) "已停止" else "批量保存完成"}：已保存 ${result.saved.size} 张，失败 ${result.failed} 张",color=WarmWhite)
+                if(result.failures.isNotEmpty()) Column(Modifier.fillMaxWidth().heightIn(max=120.dp).verticalScroll(rememberScrollState())) {
+                    result.failures.forEach { failure ->
+                        Text("${failure.name}：${failure.reason}",fontSize=12.sp,color=WarmWhite.copy(alpha=.8f),modifier=Modifier.padding(top=4.dp))
+                    }
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+                    if(result.failures.isNotEmpty()) TextButton(onClick=model::retryFailedBatch,enabled=!busy) {Text("仅重试失败")}
+                    TextButton(onClick=model::dismissBatchResult) {Text("关闭")}
                 }
             }
         }

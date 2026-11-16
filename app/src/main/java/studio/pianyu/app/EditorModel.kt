@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -36,12 +37,16 @@ data class EditorState(val source: Bitmap? = null, val filtered: Bitmap? = null,
 
 data class BatchProgress(val completed: Int, val total: Int, val failed: Int = 0,
     val stopping: Boolean = false)
-data class BatchResult(val saved: List<Uri>, val failed: Int, val canceled: Boolean)
+data class BatchFailure(val photoId: String, val name: String, val reason: String)
+data class BatchResult(val saved: List<Uri>, val failed: Int, val canceled: Boolean,
+    val failures: List<BatchFailure> = emptyList())
+data class ImportProgress(val completed: Int, val total: Int)
 data class LibraryState(val entries: List<PhotoEntry> = emptyList(),
     val thumbnails: Map<String, Bitmap> = emptyMap(), val selected: Set<String> = emptySet(),
     val originalThumbnails: Set<String> = emptySet(), val thumbnailLoading: Set<String> = emptySet(),
     val thumbnailErrors: Set<String> = emptySet(),
     val editorId: String? = null, val restoring: Boolean = true, val importing: Boolean = false,
+    val importProgress: ImportProgress? = null,
     val recipe: EditSettings? = null, val batch: BatchProgress? = null,
     val lastBatch: BatchResult? = null)
 
@@ -91,6 +96,8 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     private var renderedFilmExposure = Float.NaN
     private var renderedAutoFilmExposure: Boolean? = null
     private var renderedMeterMethod: String? = null
+    private var renderedPrintStock: String? = null
+    private var renderedPrintExposure = Float.NaN
     private var batchCancel = false
     private var automaticThumbnailsPaused = false
     private val sourceCache = bitmapCache(8 * 1024)
@@ -147,35 +154,46 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
 
     fun importPhotos(uris: List<Uri>, openSingle: Boolean = uris.size == 1) {
         if (uris.isEmpty() || library.importing) return
+        val uniqueUris = uris.distinct()
+        library = library.copy(importing = true, importProgress = ImportProgress(0, uniqueUris.size))
         viewModelScope.launch {
-            restored.await()
-            library = library.copy(importing = true)
             try {
-                val photos = withContext(Dispatchers.IO) {
-                    uris.distinct().map { uri ->
-                        try { getApplication<Application>().contentResolver.takePersistableUriPermission(uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                        catch (_: SecurityException) { /* Opening still works for a temporary grant. */ }
-                        val name = try {
-                            getApplication<Application>().contentResolver.query(uri,
-                                arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-                                if (it.moveToFirst()) it.getString(0) else null
-                            }
-                        } catch (_: Exception) { null }
-                        PhotoEntry(UUID.randomUUID().toString(), uri.toString(), name ?: "导入的照片")
-                    }
-                }
+                restored.await()
                 val existing = library.entries.mapNotNull { it.uri }.toSet()
-                val added = photos.filter { it.uri !in existing }
-                library = library.copy(entries = added + library.entries, importing = false)
+                val requested = uniqueUris.filterNot { it.toString() in existing }
+                library = library.copy(importProgress = ImportProgress(0, requested.size))
+                val photos = mutableListOf<PhotoEntry>()
+                requested.chunked(8).forEachIndexed { batchIndex, chunk ->
+                    photos += withContext(Dispatchers.IO) {
+                        chunk.map { uri ->
+                            try { getApplication<Application>().contentResolver.takePersistableUriPermission(uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                            catch (_: SecurityException) { /* Opening still works for a temporary grant. */ }
+                            val name = try {
+                                getApplication<Application>().contentResolver.query(uri,
+                                    arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                                    if (it.moveToFirst()) it.getString(0) else null
+                                }
+                            } catch (_: Exception) { null }
+                            PhotoEntry(UUID.randomUUID().toString(), uri.toString(), name ?: "导入的照片")
+                        }
+                    }
+                    val completed = minOf((batchIndex + 1) * 8, requested.size)
+                    library = library.copy(importProgress = ImportProgress(completed, requested.size))
+                }
+                val added = photos
+                library = library.copy(entries = added + library.entries, importing = false, importProgress = null)
                 persist()
-                if (openSingle && photos.size == 1) {
-                    val entry = added.firstOrNull() ?: library.entries.first { it.uri == photos.first().uri }
-                    openPhoto(entry.id)
+                if (openSingle && uniqueUris.size == 1) {
+                    val entry = library.entries.firstOrNull { it.uri == uniqueUris.single().toString() }
+                    if (entry != null) openPhoto(entry.id)
+                    else state = state.copy(notice = "已导入 0 张照片")
                 } else state = state.copy(notice = "已导入 ${added.size} 张照片")
-            } catch (error: Exception) {
-                library = library.copy(importing = false)
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) {
                 state = state.copy(error = "导入失败：${error.message}")
+            } finally {
+                library = library.copy(importing = false, importProgress = null)
             }
         }
     }
@@ -296,12 +314,13 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
 
     fun chooseLook(index: Int) {
         if (state.loading || index !in Looks.indices || (index == state.settings.lookIndex && state.settings.lookVersion > 0)) return
-        state = state.copy(settings = state.settings.copy(lookIndex = index, strength = .75f, lookVersion = 3))
+        state = state.copy(settings = state.settings.copy(lookIndex = index, strength = .75f, lookVersion = 3,
+            printStock = "", printExposure = 0f))
         commit(); renderPreview()
     }
     fun edit(settings: EditSettings) {
         if (state.source == null || state.loading) return
-        val filmChanged = state.settings.grain != settings.grain || state.settings.filmExposure != settings.filmExposure || state.settings.autoFilmExposure != settings.autoFilmExposure || state.settings.autoFilmExposureMethod != settings.autoFilmExposureMethod
+        val filmChanged = state.settings.grain != settings.grain || state.settings.filmExposure != settings.filmExposure || state.settings.autoFilmExposure != settings.autoFilmExposure || state.settings.autoFilmExposureMethod != settings.autoFilmExposureMethod || state.settings.printStock != settings.printStock || state.settings.printExposure != settings.printExposure
         state = state.copy(settings = settings)
         if (filmChanged) renderPreview(120) else composePreview()
     }
@@ -327,7 +346,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     fun updateGrain(value: Float) = edit(state.settings.copy(grain = value.coerceIn(0f, 1f)))
     fun finishAdjustment() {
         commit()
-        if (state.source != null && !state.loading && (state.settings.grain != renderedGrain || state.settings.filmExposure != renderedFilmExposure || state.settings.autoFilmExposure != renderedAutoFilmExposure || state.settings.autoFilmExposureMethod != renderedMeterMethod)) renderPreview()
+        if (state.source != null && !state.loading && !renderedFilmMatches(state.settings)) renderPreview()
     }
     fun setCrop(aspect: Float) {
         edit(state.settings.copy(cropAspect = aspect, crop = CropRect())); commit()
@@ -434,9 +453,13 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         saveCurrentSettings(); renderPreviewIfNeeded()
     }
     private fun renderPreviewIfNeeded() {
-        if (state.rendering || renderedLook != state.settings.lookIndex || renderedGrain != state.settings.grain || renderedFilmExposure != state.settings.filmExposure || renderedAutoFilmExposure != state.settings.autoFilmExposure || renderedMeterMethod != state.settings.autoFilmExposureMethod) renderPreview()
+        if (state.rendering || !renderedFilmMatches(state.settings)) renderPreview()
         else composePreview()
     }
+    private fun renderedFilmMatches(settings: EditSettings) = renderedLook == settings.lookIndex &&
+        renderedGrain == settings.grain && renderedFilmExposure == settings.filmExposure &&
+        renderedAutoFilmExposure == settings.autoFilmExposure && renderedMeterMethod == settings.autoFilmExposureMethod &&
+        renderedPrintStock == settings.printStock && renderedPrintExposure == settings.printExposure
     private fun saveCurrentSettings() {
         val id = activeId ?: return
         libraryThumbJobs.remove(id)?.cancel()
@@ -463,7 +486,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun cacheKey(id: String, settings: EditSettings, source: Bitmap) =
-        "$id:${source.width}x${source.height}:${settings.lookIndex}:${settings.grain}:${settings.filmExposure}:${settings.autoFilmExposure}:${settings.autoFilmExposureMethod}"
+        "$id:${source.width}x${source.height}:${settings.lookIndex}:${settings.grain}:${settings.filmExposure}:${settings.autoFilmExposure}:${settings.autoFilmExposureMethod}:${settings.printStock}:${settings.printExposure}"
     private fun cancelThumbnails() { thumbnailJobs.values.forEach { it.cancel() }; thumbnailJobs.clear() }
     private fun cancelLibraryThumbnails() {
         libraryThumbJobs.values.forEach { it.cancel() }; libraryThumbJobs.clear()
@@ -479,6 +502,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         frameCache.get(key)?.let {
             renderedLook = settings.lookIndex; renderedGrain = settings.grain
             renderedFilmExposure = settings.filmExposure; renderedAutoFilmExposure = settings.autoFilmExposure; renderedMeterMethod = settings.autoFilmExposureMethod
+            renderedPrintStock = settings.printStock; renderedPrintExposure = settings.printExposure
             state = state.copy(filtered = it, rendering = false, error = null)
             Log.i("PianyuPerf", "preview_cache_hit=true look=${Looks[settings.lookIndex].id}")
             composePreview(); return
@@ -490,12 +514,13 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
                 val start = SystemClock.elapsedRealtime()
                 val filtered = withContext(NativeCore.dispatcher) {
                     diagnosticsReady.await()
-                    NativeCore.render(getApplication(), source, Looks[settings.lookIndex], settings.grain, settings.filmExposure, autoFilmExposure = settings.autoFilmExposure, autoFilmExposureMethod = settings.autoFilmExposureMethod)
+                    NativeCore.render(getApplication(), source, Looks[settings.lookIndex], settings.grain, settings.filmExposure, autoFilmExposure = settings.autoFilmExposure, autoFilmExposureMethod = settings.autoFilmExposureMethod, printStock = settings.printStock, printExposure = settings.printExposure)
                 }
                 if (token != generation) return@launch
                 frameCache.put(key, filtered)
                 renderedLook = settings.lookIndex; renderedGrain = settings.grain
                 renderedFilmExposure = settings.filmExposure; renderedAutoFilmExposure = settings.autoFilmExposure; renderedMeterMethod = settings.autoFilmExposureMethod
+                renderedPrintStock = settings.printStock; renderedPrintExposure = settings.printExposure
                 state = state.copy(filtered = filtered, rendering = false)
                 Log.i("PianyuPerf", "preview_ms=${SystemClock.elapsedRealtime() - start} look=${Looks[settings.lookIndex].id}")
                 composePreview()
@@ -540,7 +565,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun composePreview() {
-        if (state.rendering || renderedLook != state.settings.lookIndex || renderedGrain != state.settings.grain || renderedFilmExposure != state.settings.filmExposure || renderedAutoFilmExposure != state.settings.autoFilmExposure || renderedMeterMethod != state.settings.autoFilmExposureMethod) return
+        if (state.rendering || !renderedFilmMatches(state.settings)) return
         val original = state.source ?: return
         val filtered = state.filtered ?: original
         pendingComposition = Composition(activeId, original, filtered, state.settings)
@@ -677,7 +702,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
             var rendered: Bitmap? = null; var finished: Bitmap? = null
             try {
                 val film = withContext(NativeCore.dispatcher) {
-                    NativeCore.render(getApplication(), original, Looks[settings.lookIndex], settings.grain, settings.filmExposure, ProcessingStage.EXPORT, settings.autoFilmExposure, settings.autoFilmExposureMethod)
+                    NativeCore.render(getApplication(), original, Looks[settings.lookIndex], settings.grain, settings.filmExposure, ProcessingStage.EXPORT, settings.autoFilmExposure, settings.autoFilmExposureMethod, settings.printStock, settings.printExposure)
                 }
                 rendered = film
                 diagnostics.checkpoint(ProcessingStage.EXPORT, original.width, original.height, Looks[settings.lookIndex].id)
@@ -692,9 +717,22 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         }
 
     fun exportSelected() {
-        if (library.batch != null || state.exporting) return
+        if (library.batch != null || library.importing || state.exporting) return
         val selected = library.entries.filter { it.id in library.selected }
         if (selected.isEmpty()) return
+        startBatch(selected)
+    }
+
+    fun retryFailedBatch() {
+        if (library.batch != null || library.importing || state.exporting) return
+        val failedIds = library.lastBatch?.failures?.map { it.photoId }?.toSet().orEmpty()
+        val selected = library.entries.filter { it.id in failedIds }
+        if (selected.isNotEmpty()) startBatch(selected)
+    }
+
+    fun dismissBatchResult() { library = library.copy(lastBatch = null) }
+
+    private fun startBatch(selected: List<PhotoEntry>) {
         cancelThumbnails(); batchCancel = false
         cancelLibraryThumbnails()
         val edge = exportEdge; val format = exportFormat
@@ -702,17 +740,36 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             var saved = 0; var failed = 0
             val outputs = mutableListOf<Uri>()
-            for (photo in selected) {
-                if (batchCancel) break
-                try { outputs += renderExport(photo.contentUri(), photo.settings, edge, false, format); saved++ }
-                catch (error: CancellationException) { throw error }
-                catch (error: OutOfMemoryError) { failed++; Log.w("Pianyu", "batch item failed: out of memory", error) }
-                catch (error: Exception) { failed++; Log.w("Pianyu", "batch item failed", error) }
-                library = library.copy(batch = BatchProgress(saved + failed, selected.size, failed, batchCancel))
+            val failures = mutableListOf<BatchFailure>()
+            try {
+                for (photo in selected) {
+                    if (batchCancel) break
+                    try { outputs += renderExport(photo.contentUri(), photo.settings, edge, false, format); saved++ }
+                    catch (error: CancellationException) { throw error }
+                    catch (error: OutOfMemoryError) {
+                        failed++
+                        failures += batchFailure(photo, error)
+                        Log.w("Pianyu", "batch item failed: out of memory", error)
+                    }
+                    catch (error: Exception) {
+                        failed++
+                        failures += batchFailure(photo, error)
+                        Log.w("Pianyu", "batch item failed", error)
+                    }
+                    library = library.copy(batch = BatchProgress(saved + failed, selected.size, failed, batchCancel))
+                }
+            } finally {
+                val canceled = batchCancel || !isActive
+                library = library.copy(batch = null,
+                    lastBatch = BatchResult(outputs.toList(), failed, canceled, failures.toList()))
+                state = state.copy(notice = "${if (canceled) "已停止 · " else ""}已保存 $saved 张${if (failed > 0) "，失败 $failed 张" else ""}")
             }
-            library = library.copy(batch = null, lastBatch = BatchResult(outputs.toList(), failed, batchCancel))
-            state = state.copy(notice = "${if (batchCancel) "已停止 · " else ""}已保存 $saved 张${if (failed > 0) "，失败 $failed 张" else ""}")
         }
+    }
+    private suspend fun batchFailure(photo: PhotoEntry, error: Throwable): BatchFailure {
+        diagnosticReport = if (error is ProcessingException) error.report
+            else withContext(Dispatchers.IO) { diagnostics.record(ProcessingStage.EXPORT, error) }
+        return BatchFailure(photo.id, photo.name, ProcessingFailure.message(ProcessingStage.EXPORT, error))
     }
     fun stopBatch() { batchCancel = true; library = library.copy(batch = library.batch?.copy(stopping = true)) }
 

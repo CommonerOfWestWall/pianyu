@@ -6,15 +6,16 @@ data class Look(val id: String, val name: String, val film: String, val paper: S
                 val positive: Boolean = false, val halo: Boolean = false,
                 val defaultStrength: Float = .65f) {
     fun params(grain: Float = 0f, filmExposure: Float = 0f, autoFilmExposure: Boolean = false,
-        autoFilmExposureMethod: String = "protect_highlights"): String = JSONObject().apply {
+        autoFilmExposureMethod: String = "protect_highlights", printStock: String = "",
+        printExposure: Float = 0f): String = JSONObject().apply {
         put("input_color_space", "sRGB"); put("input_cctf_decoding", true)
         put("output_color_space", "sRGB"); put("output_cctf_encoding", true)
         put("auto_exposure", autoFilmExposure)
         put("auto_exposure_method", autoFilmExposureMethod.takeIf {
-            it in setOf("center_weighted", "balanced", "protect_highlights") } ?: "protect_highlights")
+            it in MeteringMethods } ?: "protect_highlights")
         put("exposure_compensation_ev", (filmExposure.takeIf { it.isFinite() } ?: 0f).coerceIn(-2f, 2f).toDouble())
-        put("print_exposure", 1.0); put("film_format_mm", 35.0)
-        put("film_stock", film); put("print_stock", paper); put("scan_film", positive)
+        put("print_exposure", printExposureGain(printExposure)); put("film_format_mm", 35.0)
+        put("film_stock", film); put("print_stock", effectivePrintStock(printStock)); put("scan_film", positive)
         // The engine supports 0..2. Keep a subtle lower half, with a visibly
         // stronger upper half for phone-sized images; no replacement noise layer.
         put("grain_active", grain > 0f); put("grain_amount", (grain.coerceIn(0f, 1f) * 2f).toDouble())

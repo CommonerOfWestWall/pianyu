@@ -1,5 +1,6 @@
 #include "spektralab/spk_engine.h"
 #include <android/bitmap.h>
+#include <android/log.h>
 #include <dlfcn.h>
 #include <jni.h>
 #include <memory>
@@ -11,8 +12,10 @@
 namespace {
 struct Api {
     decltype(&spk_engine_create) create;
+    decltype(&spk_engine_destroy) destroy;
     decltype(&spk_open) open;
     decltype(&spk_render) render;
+    decltype(&spk_progress) progress;
     decltype(&spk_result_free) free_result;
     decltype(&spk_session_release) release;
     decltype(&spk_string_free) free_string;
@@ -28,8 +31,10 @@ struct Api {
         void* lib = dlopen("libpianyu_core.so", RTLD_NOW | RTLD_LOCAL);
         if (!lib) throw std::runtime_error(dlerror());
         create = symbol<decltype(create)>(lib, "spk_engine_create");
+        destroy = symbol<decltype(destroy)>(lib, "spk_engine_destroy");
         open = symbol<decltype(open)>(lib, "spk_open");
         render = symbol<decltype(render)>(lib, "spk_render");
+        progress = symbol<decltype(progress)>(lib, "spk_progress");
         free_result = symbol<decltype(free_result)>(lib, "spk_result_free");
         release = symbol<decltype(release)>(lib, "spk_session_release");
         free_string = symbol<decltype(free_string)>(lib, "spk_string_free");
@@ -83,6 +88,13 @@ extern "C" JNIEXPORT jlong JNICALL Java_studio_pianyu_app_NativeCore_create(
     } catch (const std::exception& e) { fail(env, e); return 0; }
 }
 
+extern "C" JNIEXPORT void JNICALL Java_studio_pianyu_app_NativeCore_destroy(
+        JNIEnv* env, jobject, jlong handle) {
+    try {
+        if (handle) api().destroy(reinterpret_cast<spk_engine*>(handle));
+    } catch (const std::exception& e) { fail(env, e); }
+}
+
 extern "C" JNIEXPORT jobject JNICALL Java_studio_pianyu_app_NativeCore_process(
         JNIEnv* env, jobject, jlong handle, jobject source, jstring params) {
     try {
@@ -114,8 +126,15 @@ extern "C" JNIEXPORT jobject JNICALL Java_studio_pianyu_app_NativeCore_process(
         std::vector<float>().swap(rgb);
         spk_result result{};
         struct ResultGuard { spk_result* value; ~ResultGuard() { api().free_result(value); } } guard{&result};
-        if (api().render(session.get(), "full", &result) != SPK_OK)
-            throw std::runtime_error(engine_error(engine, "Could not render image"));
+        if (api().render(session.get(), "full", &result) != SPK_OK) {
+            const std::string message = engine_error(engine, "Could not render image");
+            char* progress = nullptr;
+            if (api().progress(session.get(), nullptr, &progress) == SPK_OK && progress) {
+                __android_log_print(ANDROID_LOG_WARN, "PianyuCore", "failed_render_progress=%s", progress);
+                api().free_string(progress);
+            }
+            throw std::runtime_error(message);
+        }
         if (!result.rgba16 || !result.width || !result.height) throw std::runtime_error("Empty engine result");
 
         jclass bitmap_class = env->FindClass("android/graphics/Bitmap");

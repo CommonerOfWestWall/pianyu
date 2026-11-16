@@ -3,7 +3,9 @@ package studio.pianyu.verifier;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -23,7 +25,9 @@ public final class ReleaseVerifier extends Instrumentation {
     private final StringBuilder evidence = new StringBuilder();
     private boolean publicSmoke;
     private boolean importedStudy;
-    @Override public void onCreate(Bundle args) { super.onCreate(args); publicSmoke = args != null && "public-smoke".equals(args.getString("mode")); importedStudy = args != null && "imported-study".equals(args.getString("mode")); start(); }
+    private boolean batchUi;
+    private boolean filmPrintUi;
+    @Override public void onCreate(Bundle args) { super.onCreate(args); publicSmoke = args != null && "public-smoke".equals(args.getString("mode")); importedStudy = args != null && "imported-study".equals(args.getString("mode")); batchUi = args != null && "batch-ui".equals(args.getString("mode")); filmPrintUi = args != null && "film-print-ui".equals(args.getString("mode")); start(); }
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
@@ -33,6 +37,14 @@ public final class ReleaseVerifier extends Instrumentation {
             }
             evidence.append(shell("am start -W -n " + APP + "/.MainActivity"));
             waitPackage(APP);
+            if (batchUi) {
+                batchUi(); result.putString("stream", evidence.toString());
+                writeReport(); finish(Activity.RESULT_OK, result); return;
+            }
+            if (filmPrintUi) {
+                filmPrintUi(); result.putString("stream", evidence.toString());
+                writeReport(); finish(Activity.RESULT_OK, result); return;
+            }
             if (publicSmoke) {
                 smokePublicDemo(); result.putString("stream", evidence.toString());
                 writeReport(); finish(Activity.RESULT_OK, result); return;
@@ -153,6 +165,163 @@ public final class ReleaseVerifier extends Instrumentation {
         click("导出"); click("JPEG · 最高质量（仍有损）"); click("取消");
         evidence.append("PASS: v032 release public demo, recommended start, model description, HSL, free crop, rotation, original PNG and HEIF save, HEIF system share chooser\n");
     }
+    private void batchUi() throws Exception {
+        java.util.Set<Uri> before = queryPianyuOutputs();
+        try {
+            if (find(getUiAutomation().getRootInActiveWindow(), "‹ 照片库", false) != null) click("‹ 照片库");
+            waitText("全选");
+            if (find(getUiAutomation().getRootInActiveWindow(), "取消选择", false) != null) click("取消选择");
+            click("全选");
+            String selected = waitText("已选", true).getText().toString();
+            java.util.regex.Matcher count = java.util.regex.Pattern.compile("已选\\s*(\\d+)").matcher(selected);
+            require(count.find(), "selected count missing: " + selected);
+            int n = Integer.parseInt(count.group(1));
+            require(n > 0 && n <= 30, "unsafe batch count: " + n);
+            click("保存 " + n + " 张");
+            waitText("原尺寸 · 保留输入像素"); click("原尺寸 · 保留输入像素");
+            click("JPEG · 最高质量（仍有损）"); click("保存到相册");
+            String result = "批量保存完成：已保存 " + n + " 张，失败 0 张";
+            waitText(result, false, 180000L); screenshot("01-batch-result.png");
+            java.util.Set<Uri> after = queryPianyuOutputs(); after.removeAll(before);
+            require(after.size() == n, "expected " + n + " new owned Pianyu outputs, got " + after.size());
+            for (Uri uri : after) verifyOutput(uri);
+            evidence.append("PASS: batch-ui selected=").append(n).append(" new_outputs=").append(after.size()).append('\n');
+        } finally {
+            try {
+                if (APP.equals(currentPackage())) {
+                    if (find(getUiAutomation().getRootInActiveWindow(), "关闭", false) != null) click("关闭");
+                    if (find(getUiAutomation().getRootInActiveWindow(), "取消选择", false) != null) click("取消选择");
+                }
+            } catch (Throwable cleanupError) {
+                evidence.append("batch_ui_restore_error=").append(cleanupError.getClass().getSimpleName()).append('\n');
+            }
+            try {
+                java.util.Set<Uri> added = queryPianyuOutputs(); added.removeAll(before);
+                int deleted = 0;
+                for (Uri uri : added) if (getTargetContext().getContentResolver().delete(uri, null, null) == 1) deleted++;
+                evidence.append("batch_cleanup_deleted=").append(deleted).append('\n');
+            } catch (Throwable cleanupError) {
+                evidence.append("batch_cleanup_error=").append(cleanupError.getClass().getSimpleName()).append('\n');
+            }
+        }
+    }
+    private void filmPrintUi() throws Exception {
+        if (find(getUiAutomation().getRootInActiveWindow(), "‹ 照片库", false) != null) click("‹ 照片库");
+        if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例");
+        else if (find(getUiAutomation().getRootInActiveWindow(), "打开示例", false) != null) click("打开示例");
+        waitEnabled("导出"); click("风格"); clickLook("日常暖色"); waitEnabled("导出");
+        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色"); waitEnabled("导出");
+        click("调色"); click("胶片曝光"); waitText("自动测光");
+        String[] metering = {"均衡", "中心", "保护高光", "保护阴影"};
+        for (String method : metering) {
+            click("选择测光方式"); click(method); SystemClock.sleep(250); waitText(method); waitEnabled("导出");
+        }
+        clickMeterSwitch(); waitText("关闭自动测光可保留原片曝光起点", true); clickMeterSwitch(); waitText("保护阴影");
+        screenshot("01-metering.png");
+        click("相纸与印放"); waitText("相纸与印放");
+        click("选择冲印材料"); click("Kodak Ultra Endura"); waitText("Kodak Ultra Endura");
+        click("选择冲印材料"); click("Fujifilm Crystal Archive Type II"); waitText("Fujifilm Crystal Archive Type II");
+        setSlider("印放曝光调整", .4f); click("恢复推荐冲印 · 可撤销"); screenshot("02-paper-print.png");
+        click("返回基础调色"); click("风格"); clickLook("自然正片"); waitText("自然正片");
+        click("调色"); click("相纸与印放"); waitText("正片直接扫描 · 不经过相纸"); screenshot("03-positive-direct-scan.png");
+        click("返回基础调色"); click("风格"); clickLook("日常暖色"); waitText("日常暖色");
+        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色"); waitText("日常暖色"); screenshot("04-restored-daily.png");
+        evidence.append("PASS: film-print-ui metering=4 methods, toggle, paper stocks, +0.4 EV/reset, positive direct scan, daily restored\n");
+    }
+    private void clickLook(String text) {
+        SystemClock.sleep(250);
+        for (int attempt = 0; attempt < 7; attempt++) {
+            getUiAutomation().clearCache();
+            AccessibilityNodeInfo root = getUiAutomation().getRootInActiveWindow();
+            AccessibilityNodeInfo node = findClickableText(root, text);
+            if (node != null && node.isVisibleToUser() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                evidence.append("click=").append(text).append('\n'); return;
+            }
+            AccessibilityNodeInfo row = findScrollable(root);
+            if (row != null) row.performAction("日常暖色".equals(text)
+                ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+            SystemClock.sleep(250);
+        }
+        throw new AssertionError("look missing: " + text);
+    }
+    private AccessibilityNodeInfo findScrollable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isScrollable()) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo match = findScrollable(node.getChild(i));
+            if (match != null) return match;
+        }
+        return null;
+    }
+    private void clickMeterSwitch() {
+        long end = SystemClock.uptimeMillis() + 5000;
+        while (SystemClock.uptimeMillis() < end) {
+            getUiAutomation().clearCache();
+            AccessibilityNodeInfo node = findMeterSwitch(getUiAutomation().getRootInActiveWindow());
+            if (node != null && clickable(node).performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                evidence.append("meter_switch=clicked\n"); return;
+            }
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("meter switch click rejected");
+    }
+    private AccessibilityNodeInfo findMeterSwitch(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if ("自动测光".equals(String.valueOf(node.getContentDescription()))) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo match = findMeterSwitch(node.getChild(i));
+            if (match != null) return match;
+        }
+        return null;
+    }
+    private AccessibilityNodeInfo findClickableText(AccessibilityNodeInfo node, String text) {
+        if (node == null) return null;
+        String value = node.getText() == null ? "" : node.getText().toString();
+        if (text.equals(value)) {
+            AccessibilityNodeInfo candidate = node;
+            while (candidate != null) {
+                if (candidate.isClickable()) return candidate;
+                candidate = candidate.getParent();
+            }
+        }
+        for (int index = 0; index < node.getChildCount(); index++) {
+            AccessibilityNodeInfo match = findClickableText(node.getChild(index), text);
+            if (match != null) return match;
+        }
+        return null;
+    }
+    private java.util.Set<Uri> queryPianyuOutputs() {
+        java.util.Set<Uri> result = new java.util.LinkedHashSet<>();
+        String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.MediaColumns.OWNER_PACKAGE_NAME};
+        String selection = MediaStore.MediaColumns.OWNER_PACKAGE_NAME + "=?";
+        String[] args = {APP};
+        try (android.database.Cursor cursor = getTargetContext().getContentResolver().query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, selection, args, null)) {
+            if (cursor == null) return result;
+            int id = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+            int name = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
+            while (cursor.moveToNext()) if (cursor.getString(name).startsWith("Pianyu_"))
+                result.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getString(id)));
+        }
+        return result;
+    }
+    private void verifyOutput(Uri uri) throws Exception {
+        BitmapFactory.Options bounds = new BitmapFactory.Options(); bounds.inJustDecodeBounds = true;
+        try (java.io.InputStream input = getTargetContext().getContentResolver().openInputStream(uri)) {
+            require(input != null, "output cannot be opened: " + uri);
+            BitmapFactory.decodeStream(input, null, bounds);
+        }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0, "output has no dimensions: " + uri);
+        Bitmap bitmap;
+        try (java.io.InputStream input = getTargetContext().getContentResolver().openInputStream(uri)) {
+            require(input != null, "output cannot be reopened: " + uri);
+            bitmap = BitmapFactory.decodeStream(input);
+        }
+        require(bitmap != null, "output is not readable: " + uri);
+        evidence.append("output=").append(bounds.outWidth).append('x').append(bounds.outHeight).append('\n');
+        bitmap.recycle();
+    }
     private String shell(String command) throws Exception {
         try (ParcelFileDescriptor.AutoCloseInputStream input = new ParcelFileDescriptor.AutoCloseInputStream(getUiAutomation().executeShellCommand(command))) {
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
@@ -175,8 +344,12 @@ public final class ReleaseVerifier extends Instrumentation {
     }
     private AccessibilityNodeInfo waitText(String text) { return waitText(text, false); }
     private AccessibilityNodeInfo waitText(String text, boolean contains) {
-        long end = SystemClock.uptimeMillis() + 30000;
+        return waitText(text, contains, 30000L);
+    }
+    private AccessibilityNodeInfo waitText(String text, boolean contains, long timeoutMs) {
+        long end = SystemClock.uptimeMillis() + timeoutMs;
         while (SystemClock.uptimeMillis() < end) {
+            getUiAutomation().clearCache();
             AccessibilityNodeInfo node = find(getUiAutomation().getRootInActiveWindow(), text, contains);
             if (node != null) return node;
             SystemClock.sleep(100);
@@ -334,7 +507,7 @@ public final class ReleaseVerifier extends Instrumentation {
         }
         evidence.append("free_crop_touch_injection=").append(accepted).append('\n');
     }
-    private File directory() { File dir = new File(getTargetContext().getExternalFilesDir(null), "release-evidence-v031"); dir.mkdirs(); return dir; }
+    private File directory() { File dir = new File(getTargetContext().getExternalFilesDir(null), batchUi ? "private-batch-release-v14" : filmPrintUi ? "release-evidence-v14-ui" : "release-evidence-v031"); dir.mkdirs(); return dir; }
     private void screenshot(String name) throws Exception {
         require(APP.equals(currentPackage()), "refuse screenshot outside own app");
         SystemClock.sleep(700);

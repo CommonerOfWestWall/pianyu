@@ -5,7 +5,7 @@ enum class ProcessingStage(val label: String) {
     DECODE("解码"), ENGINE("胶片引擎"), PREVIEW("预览"), EXPORT("导出")
 }
 
-enum class ProcessingFailureKind { ALLOCATION, OTHER }
+enum class ProcessingFailureKind { ALLOCATION, DEVICE_LOST, OTHER }
 
 /** Carries the report captured before the engine checkpoint was cleared. */
 class ProcessingException(val report: String, cause: Throwable) : RuntimeException(cause.message, cause)
@@ -13,6 +13,7 @@ class ProcessingException(val report: String, cause: Throwable) : RuntimeExcepti
 object ProcessingFailure {
     private val vkResult = Regex("(?i)\\bVkResult\\s*[:=]?\\s*\\(?-(?:1|2)\\b")
     private val vkMemory = Regex("(?i)\\b(?:VK_ERROR_)?OUT_OF_(?:HOST|DEVICE)_MEMORY\\b")
+    private val vkDeviceLost = Regex("(?i)\\bVK_ERROR_DEVICE_LOST\\b|\\bVkResult\\s*[:=]?\\s*\\(?-4\\b")
 
     fun classify(error: Throwable): ProcessingFailureKind {
         if (error is OutOfMemoryError) return ProcessingFailureKind.ALLOCATION
@@ -30,6 +31,7 @@ object ProcessingFailure {
             text.contains("bad_alloc", ignoreCase = true) || vkResult.containsMatchIn(text) || vkMemory.containsMatchIn(text)) {
             return ProcessingFailureKind.ALLOCATION
         }
+        if (vkDeviceLost.containsMatchIn(text)) return ProcessingFailureKind.DEVICE_LOST
         return ProcessingFailureKind.OTHER
     }
 
@@ -40,7 +42,22 @@ object ProcessingFailure {
                 ProcessingStage.EXPORT -> "当前尺寸导出时内存分配失败；可重试或选择较小尺寸，原片未改动。"
                 else -> "${stage.label}失败（内存分配）：设备可用内存不足，请关闭其他应用后重试。"
             }
+            ProcessingFailureKind.DEVICE_LOST -> "图像引擎暂时中断，请重试；原片未改动。"
             ProcessingFailureKind.OTHER -> "${stage.label}失败：请重试；如果问题持续，请复制诊断信息。"
+        }
+    }
+}
+
+/** A lost Vulkan device cannot process the next photo. Drop it even if the retry fails. */
+internal fun <T> retryLostDevice(invalidate: () -> Unit, render: () -> T): T {
+    var retried = false
+    while (true) {
+        try { return render() }
+        catch (error: Exception) {
+            if (ProcessingFailure.classify(error) != ProcessingFailureKind.DEVICE_LOST) throw error
+            invalidate()
+            if (retried) throw error
+            retried = true
         }
     }
 }

@@ -58,6 +58,7 @@ fun EditorScreen(model: EditorModel, pickPhoto: () -> Unit) {
     val state=model.state
     val activity=LocalActivity.current
     val context=LocalContext.current
+    val version=remember(context) {context.packageManager.getPackageInfo(context.packageName,0).versionName.orEmpty()}
     DisposableEffect(model.library.batch!=null,state.exporting) {
         if(model.library.batch!=null||state.exporting) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)}
@@ -87,7 +88,7 @@ fun EditorScreen(model: EditorModel, pickPhoto: () -> Unit) {
     }
     if(crop) CropEditor(model.state,onCancel={crop=false},onDone={model.setGeometry(it);crop=false})
     if(export) ExportDialog(model,onClose={export=false})
-    if(about) AlertDialog(onDismissRequest={about=false},title={Text("片屿 · 把片刻留成岛")},text={Text("片，是照片，也是生活里的片刻。屿，是值得停留的一小块日常。岛岸、日光与一片倒影，是片屿的标记。\n\n选择胶片性格，再用自己的方式表达。\n\n0.3.2 · 本地处理，不上传照片。代码 GPL-3.0-or-later。\n\n胶片核心基于 SpektraLab；材料 profiles / LUT：spektrafilm by Andrea Volpato，CC BY-SA 4.0。\ngithub.com/andreavolpato/spektrafilm\n\n示例为 AI 生成的原创静物，不是真实胶片定标照。",modifier=Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()))},dismissButton={Column {TextButton(onClick={about=false;licenses=true}){Text("开源许可")};if(model.diagnosticReport!=null) TextButton(onClick={about=false;diagnostic=true}){Text("处理诊断")}}},confirmButton={TextButton(onClick={about=false}){Text("知道了")}})
+    if(about) AlertDialog(onDismissRequest={about=false},title={Text("片屿 · 把片刻留成岛")},text={Text("片，是照片，也是生活里的片刻。屿，是值得停留的一小块日常。岛岸、日光与一片倒影，是片屿的标记。\n\n选择胶片性格，再用自己的方式表达。\n\n$version · 本地处理，不上传照片。代码 GPL-3.0-or-later。\n\n胶片核心基于 SpektraLab；材料 profiles / LUT：spektrafilm by Andrea Volpato，CC BY-SA 4.0。\ngithub.com/andreavolpato/spektrafilm\n\n示例为 AI 生成的原创静物，不是真实胶片定标照。",modifier=Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()))},dismissButton={Column {TextButton(onClick={about=false;licenses=true}){Text("开源许可")};if(model.diagnosticReport!=null) TextButton(onClick={about=false;diagnostic=true}){Text("处理诊断")}}},confirmButton={TextButton(onClick={about=false}){Text("知道了")}})
     if(diagnostic) AlertDialog(onDismissRequest={diagnostic=false},title={Text("最近一次处理诊断")},
         text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
             Text("仅保存在本机，包含设备、处理阶段与错误。不会上传照片。系统退出原因用于排查，不能单凭一项判定故障。",fontSize=12.sp)
