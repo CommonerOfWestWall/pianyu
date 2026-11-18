@@ -3,8 +3,10 @@ package studio.pianyu.app
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -12,6 +14,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @Composable
 fun RecipePanel(model: EditorModel) {
@@ -19,19 +22,42 @@ fun RecipePanel(model: EditorModel) {
     var rename by remember { mutableStateOf<NamedRecipe?>(null) }
     var deleting by remember { mutableStateOf<NamedRecipe?>(null) }
     var menu by remember { mutableStateOf<String?>(null) }
-    val ready = !model.recipesLoading && !model.state.loading && !model.state.exporting
+    var personal by rememberSaveable { mutableStateOf(false) }
+    val creativeScroll = rememberLazyListState()
+    val personalScroll = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val ready = model.state.source != null && !model.recipesLoading && !model.state.loading && !model.state.exporting
     Column(Modifier.fillMaxWidth().height(252.dp).padding(horizontal=16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
-            Text("我的配方 · ${model.savedRecipes.size}", Modifier.weight(1f), color=Brass)
+            Text("配方", Modifier.weight(1f), color=Brass)
             TextButton(onClick={naming=true}, enabled=ready) { Text("保存当前配方") }
         }
         if (model.recipesLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        else if (model.savedRecipes.isEmpty()) {
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected=!personal, onClick={personal=false}, label={Text("创作搭配")})
+            FilterChip(selected=personal, onClick={personal=true}, label={Text("我的配方 · ${model.savedRecipes.size}")})
+        }
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), state=if(personal)personalScroll else creativeScroll) {
+        if (!personal) {
+        items(CreativeRecipes, key={"builtin-${it.id}"}) { recipe ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(vertical=4.dp)) {
+                    Text(recipe.name)
+                    Text(recipe.description, fontSize=11.sp, color=WarmWhite.copy(alpha=.65f))
+                }
+                TextButton(onClick={model.applyCreativeRecipe(recipe.id)}, enabled=ready) {
+                    Text("应用", Modifier.semantics { contentDescription="应用${recipe.name}" })
+                }
+            }
+        }
+        item {
+            Text("片屿原创创作搭配；可继续微调", fontSize=11.sp, color=WarmWhite.copy(alpha=.55f))
+        }
+        } else if (!model.recipesLoading && model.savedRecipes.isEmpty()) item {
             Text("把喜欢的调色留下来", color=WarmWhite, modifier=Modifier.padding(top=16.dp))
             Text("为当前风格与调整起个名字，下次一键使用。\n配方不包含裁切和旋转，也能用于批量套色。",
                 fontSize=12.sp, color=WarmWhite.copy(alpha=.65f), modifier=Modifier.padding(top=8.dp))
-        } else LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-            items(model.savedRecipes, key={it.id}) { recipe ->
+        } else if (!model.recipesLoading) items(model.savedRecipes, key={it.id}) { recipe ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(vertical=8.dp)) {
                         Text(recipe.name, maxLines=1, overflow=TextOverflow.Ellipsis)
@@ -51,10 +77,15 @@ fun RecipePanel(model: EditorModel) {
                     }
                 }
                 HorizontalDivider(color=WarmWhite.copy(alpha=.1f))
-            }
+        }
         }
     }
-    if (naming) RecipeNameDialog("保存配方", "", {naming=false}) { if(model.saveRecipe(it))naming=false }
+    if (naming) RecipeNameDialog("保存配方", "", {naming=false}) {
+        if(model.saveRecipe(it)) {
+            naming=false; personal=true
+            scope.launch { personalScroll.scrollToItem(0) }
+        }
+    }
     rename?.let { recipe -> RecipeNameDialog("配方改名", recipe.name, {rename=null}) {model.renameRecipe(recipe.id,it);rename=null} }
     deleting?.let { recipe -> AlertDialog(onDismissRequest={deleting=null},title={Text("删除配方？")},
         text={Text("删除「${recipe.name}」不会改变已编辑的照片。")},

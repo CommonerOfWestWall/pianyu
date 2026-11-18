@@ -30,6 +30,12 @@ adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence-v14-ui
 
 结果依赖当前系统分享器 `com.android.intentresolver` 与系统相册选择器；其他厂商需检查实际包名后调整断言。此工具不进入片屿生产 APK。
 
+v16新增显式 `palette-ui` 模式，只打开公开内置示例，检查“胶片 / 配色”切换、五个配色入口、强度0/75/100，以及新配色原尺寸PNG/HEIF保存和解码。仅删除此模式新建且属于片屿的导出项，不读/选择私人照片；最后恢复示例的日常暖色和JPEG偏好。证据写入 `release-evidence-v16-palettes`。
+
+```powershell
+adb shell am instrument -w -e mode palette-ui studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
+```
+
 ## 0.2 验收流程
 
 新工具截图目录为 `release-evidence-v02/`，不会混用0.1证据。流程：照片库示例→调色→自由裁切/比例/旋转/镜像/校平→风格参考→复制配方→保存→系统分享（不选接收人）→照片库多选套用→系统多选相册（不选私人照片）→返回。
@@ -47,3 +53,14 @@ adb pull /sdcard/Android/data/studio.pianyu.app/files/release-evidence-v14-ui
 
 
 v12的public-smoke还会重置此风格调色、保存HEIF并打开HEIF分享选择器（不选择接收人），最终恢复JPEG格式偏好。只有显式mode=imported-study会读取已有导入条目以做用户授权的本地私人研究；该模式不选择或遍历其他相册照片，不改变库中的设置，产物不得公开。测试工具和私人产物均不进入生产APK。
+
+显式 `cleanup-reference19` 模式只清理六个 `recipe-study/ref19-v16-*` 目录中已知研究文件，逐项检查规范路径，不递归删除或扫描其他库目录；清理前后核对照片库/配方文件摘要。必须先将研究证据保存到电脑。`palette-ui`沿用历史目录名 `release-evidence-v16-palettes`，不同包版本执行后应拉取到各自证据目录；当前v17结果以 installed-release-v17.json及最终日志为准。
+
+
+v18的`palette-ui`扩展为七款配色（追加暮色蓝调、深林清影），证据写入独立`release-evidence-v18-palettes`。本轮仅编译通过，手机不可用，未运行。旧v16/v17日志保留历史目录含义。cleanup-reference19的范围未扩展；不得用它清理新目录或省略显式mode执行。
+
+v20 的 `palette-ui` 遍历同一风格条中的 15 款模板。覆盖安装前后可用 `store-digests` 只读核对照片库和配方文件摘要。此模式适用于签名与目标一致的本地验收包。
+
+```powershell
+adb shell am instrument -w -e mode store-digests studio.pianyu.app.test/studio.pianyu.verifier.ReleaseVerifier
+```

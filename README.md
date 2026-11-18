@@ -12,6 +12,8 @@ v14首页仍是七个推荐搭配，手动调色提供四种测光意图、相�
 
 ## 下载
 
+最新本地候选 0.3.4-preview7（v21）在统一的 15 款风格列表中更新了八款展示名。已有照片和配方继续使用原保存索引、材料及参数。逐张参数和误差见[十九张模板与微调复核](docs/REFERENCE19-MICROADJUSTMENTS.md)，新旧名称与同输入对照见[风格命名](docs/LOOK-NAMES-v21.md)。下方为已公开版本。
+
 当前公开测试版：[v0.3.3-preview2 Release 页面](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.3-preview2)。直接下载：[pianyu-0.3.3-preview2-v14-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.3-preview2/pianyu-0.3.3-preview2-v14-arm64.apk)（约12.17 MiB）；源码包：[v0.3.3-preview2 完整源码（ZIP）](https://github.com/CommonerOfWestWall/pianyu/archive/refs/tags/v0.3.3-preview2.zip)。安装包与本地已验证的v14字节相同，同签名可覆盖安装。Release 构建使用既有 Android Debug 开发测试签名，适合开发和测试；不能承诺该签名会用于长期升级。历史版本[v0.3.2](https://github.com/CommonerOfWestWall/pianyu/releases/tag/v0.3.2)继续保留。
 
 本版功能与验证范围见[发布说明](docs/RELEASE-v0.3.3-preview2.md)。七风格对照、白马累计微调与[第三版介绍片](docs/PROMO-V3-AUDIT.md)保留为早期候选的研究记录，不能当作当前默认效果；视频没有作为本次发布附件。AI生成输入与Android实际输出分别标注，历史胶片参考为异场景风格对照，不是严格色彩标定。默认风格保留上游材料模型，片屿额外调色可在风格说明关闭。方法和局限见[胶片性格复核](docs/FILM-CHARACTER-AUDIT.md)。
@@ -36,7 +38,7 @@ v14首页仍是七个推荐搭配，手动调色提供四种测光意图、相�
 - 默认按原尺寸导出 8-bit sRGB JPEG（质量 100，高质量但仍有损），也可选择长边 1080 或 2048；另可导出编辑后的 8-bit sRGB PNG，或设备支持时的 8-bit sRGB SDR HEIF。HEIF 使用 AndroidX HeifWriter 1.1.0 和设备 HEVC/HEIC 编码器，不经过 JPEG 中转。不放大更小原图，写入 `Pictures/片屿`，编辑后导出不保留定位/EXIF 等元数据。
 - 编辑预览长边约 960，预览尺寸不代表全分辨率输出。颗粒 UI 的 0–100 映射到引擎 0–2，拖动停顿约 120ms 后预览，松手提交；双指放大可观察颗粒，颗粒随风格强度变化。
 
-## 七款风格
+## 公开版本的七款风格
 
 风格入口由 `app/src/main/java/studio/pianyu/app/Look.kt` 定义。参考材料只表示模型来源和审美方向，不是品牌合作、官方复刻或颜色保证。
 

@@ -1,0 +1,27 @@
+{
+  "family": "Noto Serif SC",
+  "style": "SemiBold",
+  "weight": 600,
+  "license": "SIL Open Font License 1.1",
+  "license_url": "https://openfontlicense.org",
+  "css_url": "https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600&text=%20AINPUY%E3%80%82%E4%B8%80%E4%BA%BA%E4%BD%8E%E5%83%8F%E5%85%89%E5%85%8B%E5%86%B7%E5%87%BA%E5%88%87%E5%88%B6%E5%8F%A4%E5%91%B3%E5%92%8C%E5%9B%BE%E5%9C%B0%E5%A4%8D%E5%A4%9C%E5%AE%9E%E5%AF%BC%E5%B1%BF%E5%B2%B8%E5%B8%B8%E5%BD%A9%E5%BD%B1%E6%84%8F%E6%95%B4%E6%96%B0%E6%97%85%E6%97%A5%E6%99%95%E6%99%AF%E6%9A%96%E6%9A%AE%E6%9C%89%E6%9E%84%E6%9E%97%E6%9F%94%E6%A6%84%E6%A9%84%E6%AD%A3%E6%B0%B4%E6%B5%85%E6%B5%93%E6%B5%B7%E6%B7%A1%E6%B7%B1%E6%B8%85%E6%B9%BE%E7%81%B0%E7%82%B9%E7%84%B6%E7%89%87%E7%94%B5%E7%99%BD%E7%9A%84%E7%B4%AB%E7%BA%A2%E7%BA%AA%E7%BB%BF%E8%83%B6%E8%87%AA%E8%89%B2%E8%93%9D%E8%A1%8C%E8%A3%81%E8%A4%90%E8%AE%A9%E8%B0%83%E9%80%8F%E9%81%93%E9%83%81%E9%87%91%E9%9D%92%E9%A3%8E%E9%BB%91%EF%BC%8C",
+  "ttf": {
+    "file": "app/src/main/res/font/editor_serif.ttf",
+    "sha256": "0bcbb801906a156fc143e23359a05123225c612ae906c110414dea4485f0776b",
+    "bytes": 31672
+  },
+  "woff2": {
+    "file": "asset-provenance/serif-subset.woff2",
+    "sha256": "ad3fd481a3d00f3ae02bf5696dc1517513eb0b7e456263d59703c359c54257a3",
+    "bytes": 18072
+  },
+  "required_codepoint_count": 55,
+  "old_font_codepoint_count": 46,
+  "old_font_characters": " AINPUY光克出切制古和复夜实导屿常彩影意整新日晕景暖柔正浓清然片电白纪绿自色裁调郁风黑",
+  "old_font_preserved": true,
+  "verification": "tools/verify_font_coverage.py",
+  "verified_status": "PASS",
+  "font_codepoint_count": 84,
+  "previous_font_sha256": "30f8bb46e6a9efb2f4bb825b44838a3315f92dd9aff85e7c57cbd58e4a97fc49",
+  "previous_font_preserved": true
+}

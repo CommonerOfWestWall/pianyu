@@ -11,8 +11,8 @@ android {
         applicationId = "studio.pianyu.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.3.3-preview2"
+        versionCode = 21
+        versionName = "0.3.4-preview7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { cppFlags += "-std=c++20"; arguments += "-DANDROID_STL=c++_shared" } }

@@ -410,14 +410,23 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applySavedRecipe(id: String) {
-        if (state.source == null || state.loading || state.exporting) return
         val recipe = savedRecipes.firstOrNull { it.id == id } ?: return
+        applyColorRecipe(recipe.settings, "已应用「${recipe.name}」，构图已保留；可返回照片库批量套用")
+    }
+
+    fun applyCreativeRecipe(id: String) {
+        val recipe = CreativeRecipes.firstOrNull { it.id == id } ?: return
+        applyColorRecipe(recipe.settings, "已应用「${recipe.name}」，构图已保留；可继续微调")
+    }
+
+    private fun applyColorRecipe(recipe: EditSettings, notice: String) {
+        if (state.source == null || state.loading || state.exporting) return
         finishAdjustment()
-        edit(state.settings.withColorRecipe(recipe.settings)); finishAdjustment()
+        edit(state.settings.withColorRecipe(recipe)); finishAdjustment()
         renderPreviewIfNeeded()
-        library = library.copy(recipe = recipe.settings.colorRecipe())
+        library = library.copy(recipe = recipe.colorRecipe())
         persist()
-        state = state.copy(notice = "已应用「${recipe.name}」，构图已保留；可返回照片库批量套用")
+        state = state.copy(notice = notice)
     }
 
     private fun persistRecipes() {

@@ -27,16 +27,36 @@ public final class ReleaseVerifier extends Instrumentation {
     private boolean importedStudy;
     private boolean batchUi;
     private boolean filmPrintUi;
-    @Override public void onCreate(Bundle args) { super.onCreate(args); publicSmoke = args != null && "public-smoke".equals(args.getString("mode")); importedStudy = args != null && "imported-study".equals(args.getString("mode")); batchUi = args != null && "batch-ui".equals(args.getString("mode")); filmPrintUi = args != null && "film-print-ui".equals(args.getString("mode")); start(); }
+    private boolean paletteUi;
+    private boolean cleanupReference19;
+    private boolean storeDigests;
+    @Override public void onCreate(Bundle args) { super.onCreate(args); publicSmoke = args != null && "public-smoke".equals(args.getString("mode")); importedStudy = args != null && "imported-study".equals(args.getString("mode")); batchUi = args != null && "batch-ui".equals(args.getString("mode")); filmPrintUi = args != null && "film-print-ui".equals(args.getString("mode")); paletteUi = args != null && "palette-ui".equals(args.getString("mode")); cleanupReference19 = args != null && "cleanup-reference19".equals(args.getString("mode")); storeDigests = args != null && "store-digests".equals(args.getString("mode")); start(); }
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            if (storeDigests) {
+                for (String name : new String[]{"library-v2.json", "recipes-v1.json"}) {
+                    File file = new File(getTargetContext().getFilesDir(), name);
+                    String digest = file.isFile() ? java.util.Arrays.toString(java.security.MessageDigest
+                        .getInstance("SHA-256").digest(java.nio.file.Files.readAllBytes(file.toPath()))) : "missing";
+                    result.putString(name, digest);
+                }
+                finish(Activity.RESULT_OK, result); return;
+            }
+            if (cleanupReference19) {
+                cleanupReference19(); result.putString("stream", evidence.toString());
+                writeReport(); finish(Activity.RESULT_OK, result); return;
+            }
             if (importedStudy) {
                 exportImportedStudy(); result.putString("stream", evidence.toString());
                 finish(Activity.RESULT_OK, result); return;
             }
             evidence.append(shell("am start -W -n " + APP + "/.MainActivity"));
             waitPackage(APP);
+            if (paletteUi) {
+                paletteUi(); result.putString("stream", evidence.toString());
+                writeReport(); finish(Activity.RESULT_OK, result); return;
+            }
             if (batchUi) {
                 batchUi(); result.putString("stream", evidence.toString());
                 writeReport(); finish(Activity.RESULT_OK, result); return;
@@ -87,6 +107,10 @@ public final class ReleaseVerifier extends Instrumentation {
             writeReport(); finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             evidence.append("FAIL: ").append(error).append('\n');
+            if (storeDigests) {
+                result.putString("stream", evidence.toString());
+                finish(Activity.RESULT_CANCELED, result); return;
+            }
             describeRanges(getUiAutomation().getRootInActiveWindow());
             try { screenshot("failure.png"); } catch (Exception ignored) { }
             result.putString("stream", evidence.toString());
@@ -204,6 +228,81 @@ public final class ReleaseVerifier extends Instrumentation {
                 evidence.append("batch_cleanup_error=").append(cleanupError.getClass().getSimpleName()).append('\n');
             }
         }
+    }
+    private void cleanupReference19() throws Exception {
+        File files = getTargetContext().getFilesDir();
+        java.util.Map<String, String> stores = new java.util.LinkedHashMap<>();
+        for (String name : new String[]{"library-v2.json", "recipes-v1.json"}) {
+            File file = new File(files, name);
+            stores.put(name, file.isFile() ? java.util.Arrays.toString(java.security.MessageDigest.getInstance("SHA-256").digest(java.nio.file.Files.readAllBytes(file.toPath()))) : "missing");
+        }
+        long bytes = 0;
+        int deleted = 0;
+        File root = new File(files, "recipe-study").getCanonicalFile();
+        for (String scene : new String[]{"bay", "garden", "night", "person", "phone-street", "phone-sunset"}) {
+            File study = new File(root, "ref19-v16-" + scene).getCanonicalFile();
+            require(root.equals(study.getParentFile()), "study cleanup outside root");
+            File outputs = new File(study, "outputs").getCanonicalFile();
+            require(study.equals(outputs.getParentFile()), "study output outside directory");
+            for (String name : new String[]{"original", "daily", "cinema", "night", "natural", "landscape", "retro", "softmono", "mist-coast", "soft-daylight", "olive-story", "cyan-travel", "golden-landscape"}) {
+                File file = new File(outputs, name + ".png").getCanonicalFile();
+                require(outputs.equals(file.getParentFile()), "study file outside outputs");
+                if (file.isFile()) { bytes += file.length(); require(file.delete(), "study output cleanup failed"); deleted++; }
+            }
+            if (outputs.exists()) require(outputs.delete(), "unexpected study outputs preserved");
+            for (String name : new String[]{"input.png", "recipes.json", "manifest.json"}) {
+                File file = new File(study, name).getCanonicalFile();
+                require(study.equals(file.getParentFile()), "study file outside directory");
+                if (file.isFile()) { bytes += file.length(); require(file.delete(), "study input cleanup failed"); deleted++; }
+            }
+            if (study.exists()) require(study.delete(), "unexpected study files preserved");
+        }
+        for (java.util.Map.Entry<String, String> entry : stores.entrySet()) {
+            File file = new File(files, entry.getKey());
+            String after = file.isFile() ? java.util.Arrays.toString(java.security.MessageDigest.getInstance("SHA-256").digest(java.nio.file.Files.readAllBytes(file.toPath()))) : "missing";
+            require(entry.getValue().equals(after), "store changed during study cleanup");
+        }
+        evidence.append("PASS: cleanup-reference19 files=").append(deleted).append(" bytes=").append(bytes).append("; library/recipe digests unchanged\n");
+    }
+    private void paletteUi() throws Exception {
+        if (find(getUiAutomation().getRootInActiveWindow(), "‹ 照片库", false) != null) click("‹ 照片库");
+        if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例");
+        else click("打开示例");
+        waitEnabled("导出"); click("风格");
+        String[] looks = {"电影日光", "日常暖色", "柔光人像", "夜色光晕", "红蓝复古", "暖金冷蓝", "蓝紫暮色", "灰青低彩", "浅蓝淡彩", "深青水色", "自然正片", "橄榄暖影", "深绿林地", "浓彩风光", "柔和黑白"};
+        for (int index = 0; index < looks.length; index++) {
+            clickLook(looks[index]); SystemClock.sleep(500);
+            waitText("缩略预览 · 长按对比 · 双指放大");
+            screenshot("palette-" + index + ".png");
+        }
+        setSlider("风格强度", 0f); screenshot("strength-0.png");
+        setSlider("风格强度", 1f); screenshot("strength-100.png");
+        setSlider("风格强度", .75f);
+        java.util.Set<Uri> created = new java.util.LinkedHashSet<>();
+        try {
+            for (String format : new String[]{"PNG · 无损像素（文件较大）", "HEIF · 高效存储（设备支持时）"}) {
+                java.util.Set<Uri> prior = queryPianyuOutputs();
+                click("导出"); click("原尺寸 · 保留输入像素"); click(format); click("保存到相册");
+                waitText("已保存到相册 · 片屿"); SystemClock.sleep(1000);
+                java.util.Set<Uri> added = queryPianyuOutputs(); added.removeAll(prior);
+                require(added.size() == 1, "palette export missing or duplicated: " + format);
+                created.addAll(added);
+                for (Uri uri : added) {
+                    String mime = getTargetContext().getContentResolver().getType(uri);
+                    require(format.startsWith("PNG") ? "image/png".equals(mime) : "image/heic".equals(mime), "wrong palette MIME: " + mime);
+                    verifyOutput(uri);
+                }
+                evidence.append("palette_export=").append(format).append('\n');
+            }
+        } finally {
+            for (Uri uri : created) {
+                require(getTargetContext().getContentResolver().delete(uri, null, null) == 1, "palette export cleanup failed: " + uri);
+            }
+        }
+        click("导出"); click("JPEG · 最高质量（仍有损）"); click("取消");
+        clickLook("日常暖色");
+        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色");
+        evidence.append("PASS: palette-ui unified look strip, both ends and mixed materials, strength 0/75/100, PNG/HEIF decode; only new verifier exports removed; public demo only\n");
     }
     private void filmPrintUi() throws Exception {
         if (find(getUiAutomation().getRootInActiveWindow(), "‹ 照片库", false) != null) click("‹ 照片库");
@@ -507,7 +606,7 @@ public final class ReleaseVerifier extends Instrumentation {
         }
         evidence.append("free_crop_touch_injection=").append(accepted).append('\n');
     }
-    private File directory() { File dir = new File(getTargetContext().getExternalFilesDir(null), batchUi ? "private-batch-release-v14" : filmPrintUi ? "release-evidence-v14-ui" : "release-evidence-v031"); dir.mkdirs(); return dir; }
+    private File directory() { File dir = new File(getTargetContext().getExternalFilesDir(null), cleanupReference19 ? "release-evidence-v16-cleanup" : paletteUi ? "release-evidence-v18-palettes" : batchUi ? "private-batch-release-v14" : filmPrintUi ? "release-evidence-v14-ui" : "release-evidence-v031"); dir.mkdirs(); return dir; }
     private void screenshot(String name) throws Exception {
         require(APP.equals(currentPackage()), "refuse screenshot outside own app");
         SystemClock.sleep(700);

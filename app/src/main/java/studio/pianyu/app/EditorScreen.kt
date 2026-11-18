@@ -16,7 +16,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
@@ -45,6 +49,17 @@ val WarmWhite=Color(0xFFF4EBDD)
 val Brass=Color(0xFFC7A269)
 val Graphite=Color(0xFF20211F)
 val Serif=FontFamily(Font(R.font.editor_serif))
+
+private val CinematicLookOrder = listOf(
+    "cinema", "daily", "soft-daylight", "night", "retro", "golden-landscape",
+    "blue-hour", "muted-teal-coast", "mist-coast", "cyan-travel", "natural",
+    "olive-story", "forest-deep", "landscape", "softmono"
+)
+
+// Display order is independent of the indices persisted by LibraryStore.
+private val LookCards = Looks.withIndex().sortedBy { (_, look) ->
+    CinematicLookOrder.indexOf(look.id).takeIf { it >= 0 } ?: CinematicLookOrder.size
+}
 
 @Composable
 fun EditorScreen(model: EditorModel, pickPhoto: () -> Unit) {
@@ -148,18 +163,33 @@ private fun LoadedEditor(model: EditorModel, export: ()->Unit, crop: ()->Unit, i
         }
         if(tab==0) {
             val look=Looks[state.settings.lookIndex]
+            val activeCard=LookCards.indexOfFirst {it.index==state.settings.lookIndex}
+            val firstCard=(activeCard-1).coerceAtLeast(0)
+            val lookListState=rememberLazyListState(initialFirstVisibleItemIndex=firstCard)
+            LaunchedEffect(model.library.editorId,activeCard) {
+                val layout=lookListState.layoutInfo
+                val visible=layout.visibleItemsInfo.any {
+                    it.index==activeCard && it.offset>=layout.viewportStartOffset &&
+                        it.offset+it.size<=layout.viewportEndOffset
+                }
+                if(!visible) lookListState.scrollToItem(firstCard)
+            }
             Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {Text(look.name,fontFamily=Serif,fontSize=24.sp);Text(if(state.settings.lookVersion==0)"胶片模型 · 未加片屿预设" else "${look.reference} · 片屿预设",fontSize=11.sp,color=Brass)}
+                Column(Modifier.weight(1f)) {Text(look.name,fontFamily=Serif,fontSize=24.sp);Text(if(state.settings.lookVersion==0)"胶片模型 · 未加片屿预设" else "材料 · ${look.reference}",fontSize=11.sp,color=Brass)}
                 TextButton(onClick={info(look)}){Text("风格说明")}
             }
-            LazyRow(contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                itemsIndexed(Looks,key={_,look->look.id}) {index,look->
+            LazyRow(modifier=Modifier.selectableGroup(),state=lookListState,contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                items(LookCards,key={it.value.id}) { (index, look) ->
                     LaunchedEffect(model.library.editorId,state.rendering,index) {if(!state.rendering)model.requestLookThumbnail(index)}
-                    Column(Modifier.width(70.dp).clickable(enabled=ready){model.chooseLook(index)},horizontalAlignment=Alignment.CenterHorizontally) {
-                        Box(Modifier.size(68.dp).border(if(index==state.settings.lookIndex)2.dp else 0.dp,if(index==state.settings.lookIndex)Brass else Color.Transparent,RoundedCornerShape(8.dp)).padding(3.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF353730)),contentAlignment=Alignment.Center) {
+                    val active=index==state.settings.lookIndex
+                    Column(Modifier.width(70.dp)
+                        .semantics {contentDescription="选择风格${look.name}"}
+                        .selectable(selected=active,enabled=ready,role=Role.RadioButton){model.chooseLook(index)},
+                        horizontalAlignment=Alignment.CenterHorizontally) {
+                        Box(Modifier.size(68.dp).border(if(active)2.dp else 0.dp,if(active)Brass else Color.Transparent,RoundedCornerShape(8.dp)).padding(3.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF353730)),contentAlignment=Alignment.Center) {
                             state.thumbnails[look.id]?.let {Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}?:Text("···",color=Brass)
                         }
-                        Text(look.name,fontSize=11.sp,color=if(index==state.settings.lookIndex)Brass else WarmWhite,maxLines=1)
+                        Text(look.name,fontSize=11.sp,color=if(active)Brass else WarmWhite,maxLines=1)
                     }
                 }
             }

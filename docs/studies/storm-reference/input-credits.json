@@ -1,0 +1,36 @@
+[
+  {
+    "scene": "phone-sunset",
+    "kind": "public real phone JPEG; author processing unknown",
+    "author": "JacobLyu",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Changchun_Jiefang_Avenue_CBD_from_Pingyang_Street.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_jpeg_sha256": "901849cc1433b6bb2ef1b5c470d8e4344382610e236bec02b7b251c60dd88e02",
+    "study_input_sha256": "078e2ca6a673154fbc2be972177ce5c2b707446d59091ad70e0ddd1fc1960275",
+    "full_decoded_input_sha256": "901849cc1433b6bb2ef1b5c470d8e4344382610e236bec02b7b251c60dd88e02",
+    "resize_from_recorded_decoded_input": {
+      "method": "Pillow RGB thumbnail LANCZOS long-edge640",
+      "pixel_identity": true,
+      "max_byte_difference": 0
+    },
+    "modifications": "Decoded to RGB, resized; experimental outputs additionally graded by Pianyu; contact sheets add layout and labels"
+  },
+  {
+    "scene": "phone-street",
+    "kind": "public real phone JPEG; author processing unknown",
+    "author": "JacobLyu",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Changchun_Treaty_Port_Zone_Historical_Culturual_Block_(Xinmin_Hutong)_20260321.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_jpeg_sha256": "49d82b81f3b41b36b3e67f7b8be7daa7ec0bcb26e6aae3eae97c972b750cc522",
+    "study_input_sha256": "39549cae2605f64eec46df8bd413c6108c2d2b395f0cae65d678d14795e0e3b5",
+    "full_decoded_input_sha256": "49d82b81f3b41b36b3e67f7b8be7daa7ec0bcb26e6aae3eae97c972b750cc522",
+    "resize_from_recorded_decoded_input": {
+      "method": "Pillow RGB thumbnail LANCZOS long-edge640",
+      "pixel_identity": true,
+      "max_byte_difference": 0
+    },
+    "modifications": "Decoded to RGB, resized; experimental outputs additionally graded by Pianyu; contact sheets add layout and labels"
+  }
+]
