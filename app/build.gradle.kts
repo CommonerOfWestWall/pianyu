@@ -11,8 +11,8 @@ android {
         applicationId = "studio.pianyu.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.3.3-preview2"
+        versionCode = 23
+        versionName = "0.3.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { cppFlags += "-std=c++20"; arguments += "-DANDROID_STL=c++_shared" } }
@@ -28,7 +28,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Local test builds only. Public releases require a separately managed signing key.
+            // The 0.3.4 GitHub APK keeps the existing development certificate for in-place upgrades.
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -44,6 +44,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.heifwriter:heifwriter:1.1.0")
+    implementation("androidx.media3:media3-transformer:1.8.1")
+    implementation("androidx.media3:media3-effect:1.8.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

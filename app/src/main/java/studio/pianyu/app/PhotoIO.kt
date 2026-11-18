@@ -24,6 +24,23 @@ object PhotoIO {
     // Do not manually recycle UI bitmaps: Compose may still be drawing the previous frame.
     // Bound CPU previews instead; unreachable frames are reclaimed by Android's bitmap GC.
     val previewDispatcher = Dispatchers.Default.limitedParallelism(1)
+
+    /** MIME providers are inconsistent for DNG, so retain the display-name fallback. */
+    fun isRaw(context: Context, uri: Uri?): Boolean = rawSuffix(context, uri) != null
+
+    private fun rawSuffix(context: Context, uri: Uri?): String? {
+        if (uri == null) return null
+        val mime = context.contentResolver.getType(uri)?.lowercase()
+        val name = runCatching {
+            context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment
+        val suffix = name?.substringAfterLast('.', "")?.lowercase()
+        if (suffix in setOf("dng", "nef", "cr2", "cr3", "arw", "raf", "rw2", "orf", "pef", "srw")) return suffix
+        return if (mime == "image/x-adobe-dng" || mime == "image/dng") "dng" else null
+    }
+
     fun decode(context: Context, uri: Uri?, edge: Int): Bitmap {
         val source = if (uri != null) ImageDecoder.createSource(context.contentResolver, uri)
         else ImageDecoder.createSource(ByteBuffer.wrap(context.assets.open("demo.jpg").use { it.readBytes() }))
@@ -48,7 +65,7 @@ object PhotoIO {
         val directory = File(context.cacheDir, "exports").apply { mkdirs() }
         directory.listFiles()?.filter { it.name.startsWith("Pianyu_source_") &&
             it.lastModified() < System.currentTimeMillis() - 86_400_000L }?.forEach { it.delete() }
-        val suffix = when (context.contentResolver.getType(uri)) {
+        val suffix = rawSuffix(context, uri) ?: when (context.contentResolver.getType(uri)) {
             "image/png" -> "png"
             "image/heic", "image/heif" -> "heic"
             else -> "jpg"

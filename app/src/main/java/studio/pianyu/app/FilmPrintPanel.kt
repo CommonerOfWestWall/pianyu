@@ -37,7 +37,7 @@ fun MeteringSelector(model: EditorModel) {
 }
 
 @Composable
-fun FilmPrintPanel(model: EditorModel, onBack: () -> Unit) {
+fun FilmPrintPanel(model: EditorModel) {
     val settings = model.state.settings
     val look = Looks[settings.lookIndex]
     val stocks = look.printStocks()
@@ -47,10 +47,6 @@ fun FilmPrintPanel(model: EditorModel, onBack: () -> Unit) {
     var more by remember(look.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { model.finishAdjustment(); onBack() }) { Text("返回基础调色") }
-            Text("相纸与印放", style = MaterialTheme.typography.titleSmall)
-        }
         if (look.positive) {
             Text("正片直接扫描 · 不经过相纸", style = MaterialTheme.typography.bodyMedium)
             Text("此风格保留正片扫描路径，相纸和印放曝光不参与处理。需要改变底片响应，请回到「胶片曝光」。",

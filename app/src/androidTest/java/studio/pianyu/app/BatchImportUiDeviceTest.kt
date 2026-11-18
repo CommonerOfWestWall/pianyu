@@ -56,7 +56,7 @@ class BatchImportUiDeviceTest {
                 activity.setContent { PianyuTheme { EditorScreen(model, pickPhoto = {}) } }
             }
             instrumentation.waitForIdleSync()
-            waitText("从相册导入 · 支持多选")
+            waitText("从相册导入")
             awaitRestored(model)
             val uris = (0 until 100).map { index ->
                 val name = if (index < 12) "sample_orientation6.heic"
@@ -104,7 +104,7 @@ class BatchImportUiDeviceTest {
                 activity.setContent { PianyuTheme { EditorScreen(model, pickPhoto = {}) } }
             }
             instrumentation.waitForIdleSync()
-            waitText("从相册导入 · 支持多选")
+            waitText("从相册导入")
             awaitRestored(model)
             val valid = fixtureUri("demo.jpg", "batch-failure-valid-${UUID.randomUUID()}")
             val bad = fixtureUri("demo.jpg", "batch-failure-empty-${UUID.randomUUID()}", empty = true)
@@ -112,7 +112,12 @@ class BatchImportUiDeviceTest {
             poll(30_000L) { val state = readLibrary(model); !state.importing && state.entries.size == 2 }
             val badId = readLibrary(model).entries.first { it.uri == bad.toString() }.id
             clickSemantic("全选"); waitText("已选 2 张"); clickSemantic("保存 2 张")
-            clickSemantic("原尺寸 · 保留输入像素"); clickSemantic("JPEG · 最高质量（仍有损）"); clickSemantic("保存到相册")
+            waitText("原尺寸 · JPEG")
+            clickSemantic("更多设置")
+            waitText("原尺寸 · 保留输入像素")
+            waitText("JPEG · 最高质量（仍有损）")
+            clickSemantic("收起设置")
+            clickSemantic("保存到相册")
             waitTextLong("批量保存完成：已保存 1 张，失败 1 张", 120_000L)
             waitTextContains("导出失败")
             assertEquals(1, readLibrary(model).lastBatch?.failures?.size)

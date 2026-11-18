@@ -1,11 +1,14 @@
 # 片屿源码归档
 
-这是公开源码包的入口说明。直接克隆或解压仓库后，从仓库根目录运行 Gradle 即可构建应用；不需要原开发工作区中的中文目录、相邻研究目录或旧的 `native-mobile` 路径。
+这是公开源码包的入口说明。直接克隆或解压仓库后，从仓库根目录准备固定版本的 LibRaw 并运行 Gradle 即可构建应用；不需要原开发工作区中的中文目录、相邻研究目录或旧的 `native-mobile` 路径。
 
 ```powershell
+./engine/setup-libraw.ps1 -DependencyDirectory ./build/deps
 ./gradlew :app:assembleDebug
 ./gradlew :app:assembleRelease
 ```
+
+Linux/macOS 使用 `./engine/setup-libraw.sh ./build/deps` 获取同一份源码。LibRaw 0.22.2 的固定归档、校验和、编译脚本和许可证随工程提供，源码归档可用脚本重现。
 
 核心重建入口是 [`docs/build-engine.ps1`](docs/build-engine.ps1)。它从仓库内的 `engine/`、根 `CMakeLists.txt`、`native/deps/` 和资源出发，在临时 staging 中应用 Android overlay，再生成 arm64 Release 核心；通过 `-NdkPath`、`-CmakePath`、`-GlslangPath` 或相应环境变量提供工具链。
 
