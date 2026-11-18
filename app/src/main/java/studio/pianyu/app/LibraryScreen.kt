@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> Unit, about: () -> Unit) {
+fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> Unit, about: () -> Unit, pickMediaFile: () -> Unit) {
     val library=model.library
     val busy=library.batch!=null||library.importing||library.restoring
     var confirmRemove by remember { mutableStateOf(false) }
@@ -38,7 +38,7 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
                 Text("照片与片刻，留成一座屿",fontSize=11.sp,color=Brass)
             }
             TextButton(onClick=about) {Text("关于")}
-            Button(onClick=pickPhoto,enabled=!busy&&!library.importing&&!library.restoring) {Text("导入")}
+            if(library.entries.isNotEmpty()) Button(onClick=pickPhoto,enabled=!busy) {Text("导入")}
         }
         if(library.restoring||library.importing) {
             library.importProgress?.let { progress ->
@@ -52,12 +52,15 @@ fun LibraryScreen(model: EditorModel, pickPhoto: () -> Unit, exportBatch: () -> 
             Column(Modifier.weight(1f).fillMaxWidth().padding(28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                 Text("让日常，有一点胶片的味道。",fontSize=22.sp,color=WarmWhite,fontFamily=Serif)
                 Spacer(Modifier.height(16.dp))
-                Text("一次选多张，在照片库里慢慢挑。\n调好一张，复制配方，批量保存。",color=WarmWhite.copy(alpha=.65f),lineHeight=25.sp)
+                Text("支持从相册一次导入多张照片。",color=WarmWhite.copy(alpha=.65f),lineHeight=25.sp)
                 Spacer(Modifier.height(28.dp))
-                Button(onClick=pickPhoto,enabled=!busy) {Text("从相册导入 · 支持多选")}
+                Button(onClick=pickPhoto,enabled=!busy) {Text("从相册导入")}
+                TextButton(onClick=pickMediaFile,enabled=!busy) {Text("导入 RAW、视频或实况")}
                 TextButton(onClick=model::loadDemo,enabled=!busy) {Text("试用示例")}
             }
         } else {
+            if (library.selected.isEmpty()) TextButton(onClick = pickMediaFile, enabled = !busy,
+                modifier = Modifier.padding(horizontal = 12.dp)) { Text("导入 RAW、视频或实况") }
             Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
                 Text(if(library.selected.isEmpty()) "照片库 · ${library.entries.size}" else "已选 ${library.selected.size} 张",Modifier.weight(1f),color=WarmWhite)
                 if(library.selected.isNotEmpty()) TextButton(onClick=model::clearSelection,enabled=!busy) {Text("取消选择")}

@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
@@ -22,6 +23,7 @@ import org.junit.runner.RunWith
 class ReferenceStyleDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val device by lazy { UiDevice.getInstance(instrumentation) }
+    private val unifiedOrder = listOf(1, 0, 8, 2, 5, 11, 12, 14, 7, 10, 3, 9, 13, 4, 6)
     private fun onMain(action: () -> Unit) = instrumentation.runOnMainSync(action)
 
     @Test(timeout=240_000)
@@ -45,13 +47,11 @@ class ReferenceStyleDeviceTest {
             screenshot("empty-library")
             onMain { model.loadDemo() }
             await { !model.state.loading && !model.state.rendering && model.state.displayedSettings != null && !model.recipesLoading }
-            val unifiedOrder = listOf(1, 0, 8, 2, 5, 11, 12, 14, 7, 10, 3, 9, 13, 4, 6)
-            clickText("风格")
             assertNotNull(device.wait(Until.findObject(By.desc("选择风格电影日光")), 5_000L))
             for (index in unifiedOrder) {
                 val look = Looks[index]
                 val action = "选择风格${look.name}"
-                clickLook(action, Direction.RIGHT)
+                clickLook(action)
                 await { model.state.settings.lookIndex == index && !model.state.rendering && model.state.displayedSettings == model.state.settings }
                 assertEquals(.75f, model.state.settings.strength, 0f)
                 assertEquals(EditSettings(lookIndex=index), model.state.settings)
@@ -87,18 +87,18 @@ class ReferenceStyleDeviceTest {
 
             clickText("配方")
             clickText("我的配方 · 1")
-            assertNotNull(device.wait(Until.findObject(By.text("参考配色验收")), 5_000L))
+            waitForUi(By.text("参考配色验收"))
             clickText("创作搭配")
             instrumentation.waitForIdleSync()
             instrumentation.uiAutomation.clearCache()
-            assertNotNull(device.wait(Until.findObject(By.desc("应用青橙夜色")), 5_000L))
+            waitForUi(By.desc("应用青橙夜色"))
             clickText("风格")
             instrumentation.waitForIdleSync()
             instrumentation.uiAutomation.clearCache()
             assertLookSelected("选择风格${Looks[next].name}")
-            clickLook("选择风格柔和黑白", Direction.RIGHT)
+            clickLook("选择风格柔和黑白")
             await { model.state.settings.lookIndex == 6 && !model.state.rendering }
-            clickLook("选择风格电影日光", Direction.LEFT)
+            clickLook("选择风格电影日光")
             await { model.state.settings.lookIndex == 1 && !model.state.rendering }
         } catch (failure: Throwable) {
             if (device.currentPackageName == "studio.pianyu.app") {
@@ -114,6 +114,16 @@ class ReferenceStyleDeviceTest {
         }
     }
 
+    private fun waitForUi(selector: BySelector) {
+        val deadline = SystemClock.uptimeMillis() + 8_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            instrumentation.uiAutomation.clearCache()
+            if (device.hasObject(selector)) return
+            SystemClock.sleep(100)
+        }
+        error("UI node did not appear: $selector")
+    }
+
     private fun clickText(text: String) {
         clickSemantic(text)
     }
@@ -126,15 +136,23 @@ class ReferenceStyleDeviceTest {
         assertTrue("look not selected: $action", radio.isChecked)
     }
 
-    private fun clickLook(action: String, direction: Direction) {
-        repeat(12) {
-            if (device.wait(Until.hasObject(By.desc(action)), 1_000L)) {
+    private fun clickLook(action: String) {
+        val order = unifiedOrder.map { "选择风格${Looks[it].name}" }
+        val target = order.indexOf(action)
+        require(target >= 0) { "Unknown look: $action" }
+        val cards = By.descStartsWith("选择风格")
+        repeat(20) {
+            instrumentation.uiAutomation.clearCache()
+            if (device.wait(Until.hasObject(By.desc(action)), 700L)) {
                 clickSemantic(action, description=true)
                 return
             }
-            val strip = device.findObject(By.scrollable(true).hasDescendant(By.descStartsWith("选择风格")))
+            val strip = device.findObject(By.scrollable(true).hasDescendant(cards))
                 ?: error("unified look strip missing")
-            strip.scroll(direction, .40f, 600)
+            val first = strip.findObjects(cards).map { order.indexOf(it.contentDescription) }
+                .filter { it >= 0 }.minOrNull()
+            val direction = if (first != null && target < first) Direction.LEFT else Direction.RIGHT
+            strip.scroll(direction, .30f, 600)
         }
         error("look not visible: $action")
     }
@@ -149,6 +167,7 @@ class ReferenceStyleDeviceTest {
         }
         val until = SystemClock.uptimeMillis() + 15_000L
         while (SystemClock.uptimeMillis() < until) {
+            instrumentation.uiAutomation.clearCache()
             var node = find(instrumentation.uiAutomation.rootInActiveWindow)
             while (node != null && !node.isClickable) node = node.parent
             if (node?.isEnabled == true && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return

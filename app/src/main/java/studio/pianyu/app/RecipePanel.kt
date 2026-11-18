@@ -28,9 +28,10 @@ fun RecipePanel(model: EditorModel) {
     val scope = rememberCoroutineScope()
     val ready = model.state.source != null && !model.recipesLoading && !model.state.loading && !model.state.exporting
     Column(Modifier.fillMaxWidth().height(252.dp).padding(horizontal=16.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
-            Text("配方", Modifier.weight(1f), color=Brass)
-            TextButton(onClick={naming=true}, enabled=ready) { Text("保存当前配方") }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalAlignment=Alignment.CenterVertically) {
+            TextButton(onClick=model::copyRecipe, enabled=ready&&!model.state.rendering) { Text("复制配方") }
+            FilledTonalButton(onClick={naming=true}, enabled=ready) { Text("保存当前调色") }
         }
         if (model.recipesLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {

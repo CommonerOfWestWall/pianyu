@@ -60,7 +60,7 @@ fun CropEditor(state: EditorState,onCancel:()->Unit,onDone:(EditSettings)->Unit)
                     TextButton(onClick=onCancel){Text("取消")}
                     Text("构图",Modifier.weight(1f),fontFamily=Serif,fontSize=24.sp)
                     TextButton(onClick={draft=draft.copy(crop=CropRect(),cropAspect=0f,quarterTurns=0,straightenDegrees=0f,flipHorizontal=false,flipVertical=false)}){Text("重置")}
-                    TextButton(onClick={onDone(draft)},enabled=!busy){Text("完成")}
+                    Button(onClick={onDone(draft)},enabled=!busy){Text("完成")}
                 }
                 val image=oriented
                 Box(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF12130F)),contentAlignment=Alignment.Center) {

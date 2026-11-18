@@ -1,5 +1,6 @@
 package studio.pianyu.app
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,8 +20,9 @@ fun ParameterValue(label: String, value: Float, range: ClosedFloatingPointRange<
         else (v * scale).roundToInt().toString()
     var entering by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
-    TextButton(onClick = { input = display(value); entering = true },
-        modifier = Modifier.widthIn(min = 52.dp).semantics { contentDescription = "输入${label}数值" }) {
+    OutlinedButton(onClick = { input = display(value); entering = true },
+        modifier = Modifier.widthIn(min = 60.dp).semantics { contentDescription = "输入${label}数值" },
+        contentPadding = PaddingValues(horizontal = 10.dp)) {
         Text(display(value))
     }
     if (entering) {

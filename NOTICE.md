@@ -30,5 +30,7 @@ spektrafilm profiles, the LUTs and their direct derivatives, with Andrea Volpato
 
 Pianyu (片屿) is an independent Android application by the Pianyu contributors, with a new Kotlin/Compose UI, JNI integration, curated recipes, mobile preview/export, HSL, geometry editing and local recipe/library persistence. Code is GPL-3.0-or-later. The original upstream notices above and license/ texts are retained. The fixed source base is SpektraLab d90cf9a005d5c7eb4c0bc1eb9cac17459c2a9289 plus the changes included in native/SOURCE-DIRTY-DIFF.patch and docs/build-engine.ps1. Unfused-FMA support is verified only on the documented device; it is not a cross-GPU parity claim. The Android UI and binary core are not taken from the community Android port.
 
+The Android RAW path uses LibRaw 0.22.2 under its LGPL-2.1 option. The exact source and SHA-256 are pinned by `engine/setup-libraw.ps1` and `engine/setup-libraw.sh`. The Android video path uses AndroidX Media3 1.8.1 under Apache-2.0. The app bundles the corresponding notices in `app/src/main/assets/licenses/`.
+
 Version 0.3.1 replaces the old internal test photograph and orientation fixtures with an original AI-generated demonstration asset, and includes an in-app license reader. Profiles/LUT data remain under their upstream CC BY-SA 4.0 terms; no material data recalibration is claimed. See asset-provenance/DEMO.md and docs/OPEN-SOURCE-NOTES.md.
 

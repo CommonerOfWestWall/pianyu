@@ -81,6 +81,8 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     private var pendingComposition: Composition? = null
     private var activeId: String? = null
     private var sourceUri: Uri? = null
+    // The photo editor owns a preview-sized float RAW decode.
+    private var rawHandle: Long = 0L
     private var loadJob: Job? = null
     private var renderJob: Job? = null
     private var composeJob: Job? = null
@@ -211,7 +213,14 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
                         val file = store.thumbnail(id, photo.settings)
                         val saved = BitmapFactory.decodeFile(file.absolutePath)
                         if (saved != null) saved to false
-                        else PhotoIO.decode(getApplication(), photo.contentUri(), 240) to true
+                        else {
+                            val uri = photo.contentUri()
+                            val context = getApplication<Application>()
+                            val original = if (uri != null && PhotoIO.isRaw(context, uri)) {
+                                withContext(NativeCore.dispatcher) { NativeCore.rawThumbnail(context, uri, 240) }
+                            } else PhotoIO.decode(context, uri, 240)
+                            original to true
+                        }
                     }
                 }
                 if (library.entries.firstOrNull { it.id == id }?.settings == photo.settings) {
@@ -242,6 +251,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         if (state.exporting || library.batch != null) return
         val photo = library.entries.firstOrNull { it.id == id } ?: return
         loadJob?.cancel(); renderJob?.cancel(); composeJob?.cancel(); cancelThumbnails()
+        releaseRawPreview()
         pendingComposition = null
         cancelLibraryThumbnails()
         val token = ++generation
@@ -253,18 +263,27 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         state = EditorState(displayed = library.thumbnails[id], settings = photo.settings, loading = true)
         val started = SystemClock.elapsedRealtime()
         loadJob = viewModelScope.launch {
+            var openingRaw = 0L
             try {
                 diagnosticsReady.await()
                 val source = sourceCache.get(id) ?: withContext(Dispatchers.IO) {
                     diagnostics.checkpoint(ProcessingStage.DECODE)
-                    try { PhotoIO.decode(getApplication(), photo.contentUri(), 960) }
-                    finally { diagnostics.finished() }
-                }.also { sourceCache.put(id, it) }
+                    try {
+                        val uri = photo.contentUri()
+                        val context = getApplication<Application>()
+                        if (uri != null && PhotoIO.isRaw(context, uri)) withContext(NativeCore.dispatcher) {
+                            openingRaw = NativeCore.openRaw(context, uri, 960)
+                            NativeCore.rawPreview(openingRaw)
+                        } else PhotoIO.decode(context, uri, 960)
+                    } finally { diagnostics.finished() }
+                }.also { if (openingRaw == 0L) sourceCache.put(id, it) }
                 if (token != generation) return@launch
                 val provisional = withContext(PhotoIO.previewDispatcher) {
                     PhotoGeometry.apply(source, photo.settings)
                 }
                 if (token != generation) return@launch
+                rawHandle = openingRaw
+                openingRaw = 0L
                 state = state.copy(source = source, displayed = provisional, loading = false)
                 Log.i("PianyuPerf", "photo_visible_ms=${SystemClock.elapsedRealtime() - started} size=${source.width}x${source.height}")
                 renderPreview()
@@ -281,7 +300,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
                     state = state.copy(loading = false)
                     reportFailure(ProcessingStage.DECODE, error)
                 }
-            }
+            } finally { NativeCore.releaseRaw(openingRaw) }
         }
     }
 
@@ -309,8 +328,22 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
             }
         }
         cancelThumbnails()
+        if (rawHandle != 0L || state.loading) {
+            generation++
+            loadJob?.cancel()
+            renderJob?.cancel()
+            composeJob?.cancel()
+            releaseRawPreview()
+        }
         library = library.copy(editorId = null)
     }
+
+    private fun releaseRawPreview() {
+        NativeCore.releaseRaw(rawHandle)
+        rawHandle = 0L
+    }
+
+    override fun onCleared() { releaseRawPreview() }
 
     fun chooseLook(index: Int) {
         if (state.loading || index !in Looks.indices || (index == state.settings.lookIndex && state.settings.lookVersion > 0)) return
@@ -517,13 +550,15 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
             composePreview(); return
         }
         state = state.copy(rendering = true, error = null)
+        val raw = rawHandle
         renderJob = viewModelScope.launch {
             try {
                 if (debounceMillis > 0) delay(debounceMillis)
                 val start = SystemClock.elapsedRealtime()
                 val filtered = withContext(NativeCore.dispatcher) {
                     diagnosticsReady.await()
-                    NativeCore.render(getApplication(), source, Looks[settings.lookIndex], settings.grain, settings.filmExposure, autoFilmExposure = settings.autoFilmExposure, autoFilmExposureMethod = settings.autoFilmExposureMethod, printStock = settings.printStock, printExposure = settings.printExposure)
+                    if (raw != 0L) NativeCore.renderRaw(getApplication(), raw, Looks[settings.lookIndex], settings.grain, settings.filmExposure, autoFilmExposure = settings.autoFilmExposure, autoFilmExposureMethod = settings.autoFilmExposureMethod, printStock = settings.printStock, printExposure = settings.printExposure)
+                    else NativeCore.render(getApplication(), source, Looks[settings.lookIndex], settings.grain, settings.filmExposure, autoFilmExposure = settings.autoFilmExposure, autoFilmExposureMethod = settings.autoFilmExposureMethod, printStock = settings.printStock, printExposure = settings.printExposure)
                 }
                 if (token != generation) return@launch
                 frameCache.put(key, filtered)
@@ -553,7 +588,8 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     // errors. Export always decodes the original URI independently at the chosen size.
     private suspend fun recoverPreview(error: Throwable): Boolean {
         val source = state.source ?: return false
-        if (ProcessingFailure.classify(error) != ProcessingFailureKind.ALLOCATION ||
+        // Keep the RAW float frame and its display bitmap at the same size.
+        if (rawHandle != 0L || ProcessingFailure.classify(error) != ProcessingFailureKind.ALLOCATION ||
             maxOf(source.width, source.height) <= 640) return false
         releasePreviewCaches()
         val token = generation
@@ -706,12 +742,19 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         withContext(Dispatchers.IO) {
             diagnosticsReady.await()
             diagnostics.checkpoint(ProcessingStage.EXPORT)
-            val original = try { PhotoIO.decode(getApplication(), uri, edge) }
-                finally { diagnostics.finished() }
-            var rendered: Bitmap? = null; var finished: Bitmap? = null
+            var exportRaw = 0L
+            var decoded: Bitmap? = null; var rendered: Bitmap? = null; var finished: Bitmap? = null
             try {
+                val context = getApplication<Application>()
+                val original = try {
+                    if (uri != null && PhotoIO.isRaw(context, uri)) withContext(NativeCore.dispatcher) {
+                        exportRaw = NativeCore.openRaw(context, uri, edge)
+                        NativeCore.rawPreview(exportRaw).also { decoded = it }
+                    } else PhotoIO.decode(context, uri, edge).also { decoded = it }
+                } finally { diagnostics.finished() }
                 val film = withContext(NativeCore.dispatcher) {
-                    NativeCore.render(getApplication(), original, Looks[settings.lookIndex], settings.grain, settings.filmExposure, ProcessingStage.EXPORT, settings.autoFilmExposure, settings.autoFilmExposureMethod, settings.printStock, settings.printExposure)
+                    if (exportRaw != 0L) NativeCore.renderRaw(getApplication(), exportRaw, Looks[settings.lookIndex], settings.grain, settings.filmExposure, ProcessingStage.EXPORT, settings.autoFilmExposure, settings.autoFilmExposureMethod, settings.printStock, settings.printExposure)
+                    else NativeCore.render(getApplication(), original, Looks[settings.lookIndex], settings.grain, settings.filmExposure, ProcessingStage.EXPORT, settings.autoFilmExposure, settings.autoFilmExposureMethod, settings.printStock, settings.printExposure)
                 }
                 rendered = film
                 diagnostics.checkpoint(ProcessingStage.EXPORT, original.width, original.height, Looks[settings.lookIndex].id)
@@ -722,7 +765,10 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
                 catch (error: OutOfMemoryError) { throw ProcessingException(diagnostics.record(ProcessingStage.EXPORT, error), error) }
                 catch (error: Exception) { throw ProcessingException(diagnostics.record(ProcessingStage.EXPORT, error), error) }
                 finally { diagnostics.finished() }
-            } finally { listOfNotNull(original, rendered, finished).distinct().forEach { it.recycle() } }
+            } finally {
+                if (exportRaw != 0L) NativeCore.releaseRaw(exportRaw)
+                listOfNotNull(decoded, rendered, finished).distinct().forEach { it.recycle() }
+            }
         }
 
     fun exportSelected() {

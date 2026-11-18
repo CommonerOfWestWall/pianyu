@@ -72,8 +72,8 @@ public final class ReleaseVerifier extends Instrumentation {
             if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例"); else click("窗边静物 · 示例");
             waitText("日常暖色"); waitEnabled("导出"); screenshot("01-editor.png");
             click("调色"); waitText("曝光"); screenshot("02-adjustment.png");
-            click("HSL分色"); waitText("红 · 饱和"); setSlider("红 · 饱和", -.4f); screenshot("02b-hsl.png");
-            click("配方"); click("保存当前配方"); setEditableText("验收·日常配方"); click("保存名称");
+            clickIfVisible("进阶"); clickFirstVisible("HSL分色调整", "HSL分色"); waitText("红 · 饱和"); setSlider("红 · 饱和", -.4f); screenshot("02b-hsl.png");
+            click("配方"); clickFirstVisible("保存当前调色", "保存当前配方"); setEditableText("验收·日常配方"); click("保存名称");
             waitText("验收·日常配方"); click("管理配方验收·日常配方"); click("改名");
             setEditableText("验收·花窗"); click("保存名称"); waitText("验收·花窗"); screenshot("02c-recipes.png");
             click("应用配方验收·花窗"); click("对比原图"); screenshot("02d-original-compare.png"); click("返回效果");
@@ -84,9 +84,9 @@ public final class ReleaseVerifier extends Instrumentation {
             click("裁切 / 旋转"); waitText("构图"); click("重置"); SystemClock.sleep(500); waitEnabled("1:1"); click("1:1"); screenshot("03-crop-workspace.png");
             click("自由"); SystemClock.sleep(200); dragCropCorner(); screenshot("03b-free-crop-drag.png");
             setSlider("校平角度", 8f); screenshot("03c-straighten.png");
-            click("右转 90°"); SystemClock.sleep(200); waitEnabled("4:5"); click("4:5"); click("水平镜像"); SystemClock.sleep(200); waitEnabled("完成"); click("完成"); click("风格"); waitText("日常暖色"); screenshot("04-cropped.png"); click("风格说明"); waitText("明白了"); screenshot("05-look-reference.png"); click("明白了"); click("复制配方");
+            click("右转 90°"); SystemClock.sleep(200); waitEnabled("4:5"); click("4:5"); click("水平镜像"); SystemClock.sleep(200); waitEnabled("完成"); click("完成"); click("风格"); waitText("日常暖色"); screenshot("04-cropped.png"); click("风格说明"); waitText("明白了"); screenshot("05-look-reference.png"); click("明白了"); if (!clickIfVisible("复制配方")) { click("配方"); click("复制配方"); }
             click("导出"); click("保存到相册"); waitText("已保存到相册 · 片屿"); screenshot("06-saved.png");
-            click("导出"); click("分享");
+            click("导出"); clickFirstVisible("分享编辑后照片", "分享");
             waitPackage("com.android.intentresolver"); waitText("Pianyu_", true);
             evidence.append("share=system chooser; no recipient selected\n");
             shell("input keyevent KEYCODE_BACK"); waitPackage(APP);
@@ -169,24 +169,24 @@ public final class ReleaseVerifier extends Instrumentation {
         click("风格说明"); click("关闭片屿预设"); waitText("胶片模型 · 未加片屿预设");
         click("风格说明"); click("启用片屿预设"); waitEnabled("导出");
         evidence.append("finish=disabled and re-enabled via actual release UI\n");
-        click("调色"); click("胶片曝光"); setSlider("胶片曝光调整", .7f); waitEnabled("导出");
+        click("调色"); clickIfVisible("进阶"); click("胶片曝光"); setSlider("胶片曝光调整", .7f); waitEnabled("导出");
         screenshot("v032-film-exposure.png"); click("重置胶片曝光"); waitEnabled("导出");
         evidence.append("film exposure=+0.7EV and reset via release UI\n");
         click("风格");
-        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色");
-        evidence.append("recommended=reset through style description; color reset with geometry preserved\n");
+        resetRecommendedStyle();
+        evidence.append("recommended=reset from style controls; color reset with geometry preserved\n");
         click("裁切 / 旋转"); click("自由"); click("右转 90°"); screenshot("v032-free-rotate.png"); click("重置"); click("完成");
-        click("调色"); click("HSL分色调整"); waitText("红 · 饱和"); screenshot("v032-hsl.png");
-        click("风格"); click("导出"); waitText("原尺寸 · 保留输入像素");
+        click("调色"); clickIfVisible("进阶"); click("HSL分色调整"); waitText("红 · 饱和"); screenshot("v032-hsl.png");
+        click("风格"); click("导出"); clickIfVisible("更多设置"); waitText("原尺寸 · 保留输入像素");
         click("PNG · 无损像素（文件较大）"); screenshot("v032-original-export.png");
         click("保存到相册"); waitText("已保存到相册 · 片屿");
-        click("导出"); click("HEIF · 高效存储（设备支持时）"); screenshot("v12-heif-export.png");
+        click("导出"); clickIfVisible("更多设置"); click("HEIF · 高效存储（设备支持时）"); screenshot("v12-heif-export.png");
         click("保存到相册"); waitText("已保存到相册 · 片屿");
         evidence.append("HEIF=release UI gallery save completed; hardware writer in shrunk build\n");
         click("导出"); click("分享编辑后照片"); waitPackage("com.android.intentresolver");
         evidence.append("share=system chooser; no recipient selected\n");
         shell("input keyevent KEYCODE_BACK"); waitPackage(APP);
-        click("导出"); click("JPEG · 最高质量（仍有损）"); click("取消");
+        click("导出"); clickIfVisible("更多设置"); click("JPEG · 最高质量（仍有损）"); click("取消");
         evidence.append("PASS: v032 release public demo, recommended start, model description, HSL, free crop, rotation, original PNG and HEIF save, HEIF system share chooser\n");
     }
     private void batchUi() throws Exception {
@@ -202,7 +202,7 @@ public final class ReleaseVerifier extends Instrumentation {
             int n = Integer.parseInt(count.group(1));
             require(n > 0 && n <= 30, "unsafe batch count: " + n);
             click("保存 " + n + " 张");
-            waitText("原尺寸 · 保留输入像素"); click("原尺寸 · 保留输入像素");
+            clickIfVisible("更多设置"); waitText("原尺寸 · 保留输入像素"); click("原尺寸 · 保留输入像素");
             click("JPEG · 最高质量（仍有损）"); click("保存到相册");
             String result = "批量保存完成：已保存 " + n + " 张，失败 0 张";
             waitText(result, false, 180000L); screenshot("01-batch-result.png");
@@ -282,7 +282,7 @@ public final class ReleaseVerifier extends Instrumentation {
         try {
             for (String format : new String[]{"PNG · 无损像素（文件较大）", "HEIF · 高效存储（设备支持时）"}) {
                 java.util.Set<Uri> prior = queryPianyuOutputs();
-                click("导出"); click("原尺寸 · 保留输入像素"); click(format); click("保存到相册");
+                click("导出"); clickIfVisible("更多设置"); click("原尺寸 · 保留输入像素"); click(format); click("保存到相册");
                 waitText("已保存到相册 · 片屿"); SystemClock.sleep(1000);
                 java.util.Set<Uri> added = queryPianyuOutputs(); added.removeAll(prior);
                 require(added.size() == 1, "palette export missing or duplicated: " + format);
@@ -299,9 +299,9 @@ public final class ReleaseVerifier extends Instrumentation {
                 require(getTargetContext().getContentResolver().delete(uri, null, null) == 1, "palette export cleanup failed: " + uri);
             }
         }
-        click("导出"); click("JPEG · 最高质量（仍有损）"); click("取消");
+        click("导出"); clickIfVisible("更多设置"); click("JPEG · 最高质量（仍有损）"); click("取消");
         clickLook("日常暖色");
-        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色");
+        resetRecommendedStyle();
         evidence.append("PASS: palette-ui unified look strip, both ends and mixed materials, strength 0/75/100, PNG/HEIF decode; only new verifier exports removed; public demo only\n");
     }
     private void filmPrintUi() throws Exception {
@@ -309,8 +309,8 @@ public final class ReleaseVerifier extends Instrumentation {
         if (find(getUiAutomation().getRootInActiveWindow(), "试用示例", false) != null) click("试用示例");
         else if (find(getUiAutomation().getRootInActiveWindow(), "打开示例", false) != null) click("打开示例");
         waitEnabled("导出"); click("风格"); clickLook("日常暖色"); waitEnabled("导出");
-        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色"); waitEnabled("导出");
-        click("调色"); click("胶片曝光"); waitText("自动测光");
+        resetRecommendedStyle(); waitEnabled("导出");
+        click("调色"); clickIfVisible("进阶"); click("胶片曝光"); waitText("自动测光");
         String[] metering = {"均衡", "中心", "保护高光", "保护阴影"};
         for (String method : metering) {
             click("选择测光方式"); click(method); SystemClock.sleep(250); waitText(method); waitEnabled("导出");
@@ -321,11 +321,27 @@ public final class ReleaseVerifier extends Instrumentation {
         click("选择冲印材料"); click("Kodak Ultra Endura"); waitText("Kodak Ultra Endura");
         click("选择冲印材料"); click("Fujifilm Crystal Archive Type II"); waitText("Fujifilm Crystal Archive Type II");
         setSlider("印放曝光调整", .4f); click("恢复推荐冲印 · 可撤销"); screenshot("02-paper-print.png");
-        click("返回基础调色"); click("风格"); clickLook("自然正片"); waitText("自然正片");
-        click("调色"); click("相纸与印放"); waitText("正片直接扫描 · 不经过相纸"); screenshot("03-positive-direct-scan.png");
-        click("返回基础调色"); click("风格"); clickLook("日常暖色"); waitText("日常暖色");
-        click("风格说明"); waitEnabled("重置此风格调色"); click("重置此风格调色"); waitText("日常暖色"); screenshot("04-restored-daily.png");
+        clickFirstVisible("返回基础调色", "基础"); click("风格"); clickLook("自然正片"); waitText("自然正片");
+        click("调色"); clickIfVisible("进阶"); click("相纸与印放"); waitText("正片直接扫描 · 不经过相纸"); screenshot("03-positive-direct-scan.png");
+        clickFirstVisible("返回基础调色", "基础"); click("风格"); clickLook("日常暖色"); waitText("日常暖色");
+        resetRecommendedStyle(); waitText("日常暖色"); screenshot("04-restored-daily.png");
         evidence.append("PASS: film-print-ui metering=4 methods, toggle, paper stocks, +0.4 EV/reset, positive direct scan, daily restored\n");
+    }
+    private boolean clickIfVisible(String label) {
+        try { getUiAutomation().waitForIdle(100, 1_000); }
+        catch (java.util.concurrent.TimeoutException ignored) { }
+        getUiAutomation().clearCache();
+        if (find(getUiAutomation().getRootInActiveWindow(), label, false) == null) return false;
+        click(label);
+        return true;
+    }
+    private void clickFirstVisible(String current, String previous) {
+        if (!clickIfVisible(current)) click(previous);
+    }
+    private void resetRecommendedStyle() {
+        if (find(getUiAutomation().getRootInActiveWindow(), "重置此风格调色", false) == null) click("风格说明");
+        waitEnabled("重置此风格调色");
+        click("重置此风格调色");
     }
     private void clickLook(String text) {
         SystemClock.sleep(250);
@@ -477,8 +493,12 @@ public final class ReleaseVerifier extends Instrumentation {
     }
     private void click(String text) {
         require(APP.equals(currentPackage()), "refuse action outside own app");
-        AccessibilityNodeInfo node = clickable(waitText(text));
-        require(node.isEnabled() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK), "click rejected: " + text);
+        AccessibilityNodeInfo node = waitText(text);
+        while (node != null && !node.isClickable()) {
+            if (node.isSelected() || node.isChecked()) return;
+            node = node.getParent();
+        }
+        require(node != null && node.isEnabled() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK), "click rejected: " + text);
         evidence.append("click=").append(text).append('\n');
     }
     private void setSlider(String description, float value) {

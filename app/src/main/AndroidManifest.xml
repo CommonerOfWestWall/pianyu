@@ -1,4 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
     <application android:label="片屿" android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher" android:theme="@style/Theme.Pianyu"
         android:allowBackup="false" android:supportsRtl="true">
