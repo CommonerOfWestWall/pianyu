@@ -4,7 +4,7 @@
 
 ## 安装
 
-下载下方的 `pianyu-0.3.12-arm64.apk`。适用于 Android 10 及以上的 arm64 设备，胶片引擎使用 Vulkan。此版沿用 GitHub 旧版签名，可直接覆盖安装同签名的旧版并保留应用内照片库和配方。版本代码为 31。
+[下载 pianyu-0.3.12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.12/pianyu-0.3.12-arm64.apk)。适用于 Android 10 及以上的 arm64 设备，胶片引擎使用 Vulkan。此版沿用 GitHub 旧版签名，可直接覆盖安装同签名的旧版并保留应用内照片库和配方。版本代码为 31。
 
 ## 从 0.3.4 升级
 
