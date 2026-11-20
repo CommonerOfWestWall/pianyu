@@ -9,7 +9,8 @@ private fun Look.finishBase(): EditSettings = when (id) {
     "landscape" -> EditSettings(lookVersion = 0, saturation = 0.01f, highlights = -0.08f, shadows = 0.06f, hsl = HslSettings(red = HslChannel(0f, -0.08f, 0.03f), orange = HslChannel(0f, -0.09f, 0.02f), yellow = HslChannel(0.18f, -0.08f, -0.03f), green = HslChannel(0.55f, 0.04f, -0.08f), blue = HslChannel(0.03f, 0.04f, -0.08f), magenta = HslChannel(0f, 0f, 0.04f)))
     "retro" -> EditSettings(lookVersion = 0, exposure = 0.03f, contrast = 0.045f, saturation = 0.1f, highlights = -0.04f, shadows = 0.02f, hsl = HslSettings(red = HslChannel(0f, 0.03f, 0f), yellow = HslChannel(0f, -0.06f, 0f), green = HslChannel(0.18f, -0.02f, -0.02f), cyan = HslChannel(0.5f, 0.1f, -0.04f), blue = HslChannel(0.36f, 0.15f, -0.08f)))
     "softmono" -> EditSettings(lookVersion = 0, contrast = -0.12f, shadows = 0.12f, highlights = -0.06f, fade = 0.045f)
-    else -> ReferencePalettes.firstOrNull { it.look.id == id }?.finish ?: EditSettings(lookVersion = 0)
+    else -> (ReferencePalettes + SeasonalPalettes + CinemaPalettes)
+        .firstOrNull { it.look.id == id }?.finish ?: EditSettings(lookVersion = 0)
 }
 
 /** Material strength sent to the film engine for this stored settings version. */

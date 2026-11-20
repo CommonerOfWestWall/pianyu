@@ -16,43 +16,60 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
+private enum class RecipeSection { OFFICIAL, PERSONAL }
+
 @Composable
-fun RecipePanel(model: EditorModel) {
+fun RecipePanel(model: EditorModel, modifier: Modifier = Modifier) {
     var naming by remember { mutableStateOf(false) }
     var rename by remember { mutableStateOf<NamedRecipe?>(null) }
     var deleting by remember { mutableStateOf<NamedRecipe?>(null) }
     var menu by remember { mutableStateOf<String?>(null) }
-    var personal by rememberSaveable { mutableStateOf(false) }
-    val creativeScroll = rememberLazyListState()
+    var selectedSection by rememberSaveable { mutableStateOf<RecipeSection?>(null) }
+    val section = selectedSection ?: if (model.savedRecipes.isNotEmpty()) RecipeSection.PERSONAL else RecipeSection.OFFICIAL
+    val officialScroll = rememberLazyListState()
     val personalScroll = rememberLazyListState()
+    val scrollState = when (section) {
+        RecipeSection.OFFICIAL -> officialScroll
+        RecipeSection.PERSONAL -> personalScroll
+    }
     val scope = rememberCoroutineScope()
     val ready = model.state.source != null && !model.recipesLoading && !model.state.loading && !model.state.exporting
-    Column(Modifier.fillMaxWidth().height(252.dp).padding(horizontal=16.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp, Alignment.End),
+    Column(modifier.fillMaxWidth().padding(horizontal=16.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
-            TextButton(onClick=model::copyRecipe, enabled=ready&&!model.state.rendering) { Text("复制配方") }
-            FilledTonalButton(onClick={naming=true}, enabled=ready) { Text("保存当前调色") }
+            Row(horizontalArrangement=Arrangement.spacedBy(6.dp), verticalAlignment=Alignment.CenterVertically) {
+                LookChip("我的配方", section == RecipeSection.PERSONAL, true) {
+                    selectedSection = RecipeSection.PERSONAL
+                }
+                LookChip("官方配方", section == RecipeSection.OFFICIAL, true) {
+                    selectedSection = RecipeSection.OFFICIAL
+                }
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(0.dp), verticalAlignment=Alignment.CenterVertically) {
+                TextButton(onClick=model::copyRecipe, enabled=ready&&!model.state.rendering,
+                    modifier=Modifier.semantics { contentDescription = "复制当前配方" },
+                    contentPadding=PaddingValues(horizontal=6.dp)) { Text("复制") }
+                TextButton(onClick={naming=true}, enabled=ready,
+                    modifier=Modifier.semantics { contentDescription = "保存当前调色为配方" },
+                    contentPadding=PaddingValues(horizontal=6.dp)) { Text("保存") }
+            }
         }
         if (model.recipesLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected=!personal, onClick={personal=false}, label={Text("创作搭配")})
-            FilterChip(selected=personal, onClick={personal=true}, label={Text("我的配方 · ${model.savedRecipes.size}")})
-        }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), state=if(personal)personalScroll else creativeScroll) {
-        if (!personal) {
-        items(CreativeRecipes, key={"builtin-${it.id}"}) { recipe ->
+        Text("整套套用会替换当前调色，保留构图。", fontSize = 12.sp,
+            color = WarmWhite.copy(alpha = .7f), modifier = Modifier.padding(bottom = 6.dp))
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), state = scrollState) {
+        if (section == RecipeSection.OFFICIAL) {
+        val recipes = CreativeRecipes
+        items(recipes, key={"builtin-${it.id}"}) { recipe ->
             Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(vertical=4.dp)) {
                     Text(recipe.name)
                     Text(recipe.description, fontSize=11.sp, color=WarmWhite.copy(alpha=.65f))
                 }
                 TextButton(onClick={model.applyCreativeRecipe(recipe.id)}, enabled=ready) {
-                    Text("应用", Modifier.semantics { contentDescription="应用${recipe.name}" })
+                    Text("整套套用", Modifier.semantics { contentDescription="整套套用${recipe.name}" })
                 }
             }
-        }
-        item {
-            Text("片屿原创创作搭配；可继续微调", fontSize=11.sp, color=WarmWhite.copy(alpha=.55f))
         }
         } else if (!model.recipesLoading && model.savedRecipes.isEmpty()) item {
             Text("把喜欢的调色留下来", color=WarmWhite, modifier=Modifier.padding(top=16.dp))
@@ -65,7 +82,7 @@ fun RecipePanel(model: EditorModel) {
                         Text(Looks[recipe.settings.lookIndex].name+" · 保留独立构图", fontSize=11.sp, color=WarmWhite.copy(alpha=.6f))
                     }
                     TextButton(onClick={model.applySavedRecipe(recipe.id)}, enabled=ready) {
-                        Text("应用", Modifier.semantics { contentDescription="应用配方${recipe.name}" })
+                        Text("整套套用", Modifier.semantics { contentDescription="整套套用${recipe.name}" })
                     }
                     Box {
                         TextButton(onClick={menu=recipe.id}, enabled=ready, modifier=Modifier.width(48.dp)) {
@@ -83,7 +100,8 @@ fun RecipePanel(model: EditorModel) {
     }
     if (naming) RecipeNameDialog("保存配方", "", {naming=false}) {
         if(model.saveRecipe(it)) {
-            naming=false; personal=true
+            naming = false
+            selectedSection = RecipeSection.PERSONAL
             scope.launch { personalScroll.scrollToItem(0) }
         }
     }

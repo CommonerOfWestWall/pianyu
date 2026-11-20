@@ -11,8 +11,8 @@ android {
         applicationId = "studio.pianyu.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 23
-        versionName = "0.3.4"
+        versionCode = 31
+        versionName = "0.3.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += "arm64-v8a" }
         externalNativeBuild { cmake { cppFlags += "-std=c++20"; arguments += "-DANDROID_STL=c++_shared" } }
@@ -28,7 +28,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // The 0.3.4 GitHub APK keeps the existing development certificate for in-place upgrades.
+            // Keep the existing development certificate for in-place upgrades.
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

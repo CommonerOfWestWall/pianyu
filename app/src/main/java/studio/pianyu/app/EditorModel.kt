@@ -33,6 +33,7 @@ data class EditorState(val source: Bitmap? = null, val filtered: Bitmap? = null,
     val settings: EditSettings = EditSettings(), val loading: Boolean = false,
     val rendering: Boolean = false, val exporting: Boolean = false,
     val notice: String? = null, val error: String? = null,
+    val recipeUndoId: Long? = null,
     val canUndo: Boolean = false, val canRedo: Boolean = false)
 
 data class BatchProgress(val completed: Int, val total: Int, val failed: Int = 0,
@@ -41,8 +42,11 @@ data class BatchFailure(val photoId: String, val name: String, val reason: Strin
 data class BatchResult(val saved: List<Uri>, val failed: Int, val canceled: Boolean,
     val failures: List<BatchFailure> = emptyList())
 data class ImportProgress(val completed: Int, val total: Int)
+internal const val DEMO_PHOTO_ID = "demo-original-v1"
+
 data class LibraryState(val entries: List<PhotoEntry> = emptyList(),
     val thumbnails: Map<String, Bitmap> = emptyMap(), val selected: Set<String> = emptySet(),
+    val selectionMode: Boolean = false,
     val originalThumbnails: Set<String> = emptySet(), val thumbnailLoading: Set<String> = emptySet(),
     val thumbnailErrors: Set<String> = emptySet(),
     val editorId: String? = null, val restoring: Boolean = true, val importing: Boolean = false,
@@ -93,6 +97,10 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     private val thumbnailSlots = Semaphore(1)
     private val history = mutableListOf(EditSettings())
     private var position = 0
+    private var nextRecipeUndoId = 0L
+    private data class RecipeUndo(val id: Long, val photoId: String,
+        val after: EditSettings, val beforePosition: Int, val afterPosition: Int)
+    private var pendingRecipeUndo: RecipeUndo? = null
     private var renderedLook = -1
     private var renderedGrain = -1f
     private var renderedFilmExposure = Float.NaN
@@ -145,8 +153,8 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     fun loadDemo() {
         viewModelScope.launch {
             restored.await()
-            val demo = library.entries.firstOrNull { it.id == "demo-original-v1" }
-                ?: PhotoEntry("demo-original-v1", null, "窗边静物 · 示例").also {
+            val demo = library.entries.firstOrNull { it.id == DEMO_PHOTO_ID }
+                ?: PhotoEntry(DEMO_PHOTO_ID, null, "窗边静物 · 示例").also {
                     library = library.copy(entries = listOf(it) + library.entries)
                     persist()
                 }
@@ -347,12 +355,14 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
 
     fun chooseLook(index: Int) {
         if (state.loading || index !in Looks.indices || (index == state.settings.lookIndex && state.settings.lookVersion > 0)) return
+        invalidateRecipeUndo()
         state = state.copy(settings = state.settings.copy(lookIndex = index, strength = .75f, lookVersion = 3,
             printStock = "", printExposure = 0f))
         commit(); renderPreview()
     }
     fun edit(settings: EditSettings) {
         if (state.source == null || state.loading) return
+        invalidateRecipeUndo()
         val filmChanged = state.settings.grain != settings.grain || state.settings.filmExposure != settings.filmExposure || state.settings.autoFilmExposure != settings.autoFilmExposure || state.settings.autoFilmExposureMethod != settings.autoFilmExposureMethod || state.settings.printStock != settings.printStock || state.settings.printExposure != settings.printExposure
         state = state.copy(settings = settings)
         if (filmChanged) renderPreview(120) else composePreview()
@@ -448,18 +458,27 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyCreativeRecipe(id: String) {
-        val recipe = CreativeRecipes.firstOrNull { it.id == id } ?: return
+        val recipe = CreativeRecipes.firstOrNull { it.id == id }
+            ?: VariantRecipes.firstOrNull { it.id == id } ?: return
         applyColorRecipe(recipe.settings, "已应用「${recipe.name}」，构图已保留；可继续微调")
     }
 
     private fun applyColorRecipe(recipe: EditSettings, notice: String) {
         if (state.source == null || state.loading || state.exporting) return
         finishAdjustment()
+        val before = state.settings
+        val beforePosition = position
         edit(state.settings.withColorRecipe(recipe)); finishAdjustment()
+        val after = state.settings
         renderPreviewIfNeeded()
         library = library.copy(recipe = recipe.colorRecipe())
         persist()
-        state = state.copy(notice = notice)
+        if (before != after) {
+            val id = ++nextRecipeUndoId
+            val photoId = activeId ?: return
+            pendingRecipeUndo = RecipeUndo(id, photoId, after, beforePosition, position)
+            state = state.copy(notice = notice, recipeUndoId = id)
+        } else state = state.copy(notice = notice)
     }
 
     private fun persistRecipes() {
@@ -487,12 +506,28 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         state = state.copy(canUndo = position > 0, canRedo = false)
         saveCurrentSettings()
     }
-    fun undo() { if (position > 0) restore(--position) }
-    fun redo() { if (position < history.lastIndex) restore(++position) }
+    fun undo() { invalidateRecipeUndo(); if (position > 0) restore(--position) }
+    fun redo() { invalidateRecipeUndo(); if (position < history.lastIndex) restore(++position) }
     fun reset() { edit(EditSettings()); commit(); renderPreviewIfNeeded() }
     private fun restore(index: Int) {
         state = state.copy(settings = history[index], canUndo = index > 0, canRedo = index < history.lastIndex)
         saveCurrentSettings(); renderPreviewIfNeeded()
+    }
+    private fun invalidateRecipeUndo() {
+        pendingRecipeUndo = null
+        if (state.recipeUndoId != null) state = state.copy(recipeUndoId = null)
+    }
+
+    fun undoRecipeApplication(id: Long): Boolean {
+        val pending = pendingRecipeUndo
+        if (pending == null || pending.id != id || state.recipeUndoId != id ||
+            activeId != pending.photoId || position != pending.afterPosition || state.settings != pending.after)
+            return false
+        pendingRecipeUndo = null
+        state = state.copy(recipeUndoId = null)
+        position = pending.beforePosition
+        restore(position)
+        return true
     }
     private fun renderPreviewIfNeeded() {
         if (state.rendering || !renderedFilmMatches(state.settings)) renderPreview()
@@ -663,10 +698,11 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleSelected(id: String) {
-        library = library.copy(selected = if (id in library.selected) library.selected - id else library.selected + id)
+        library = library.copy(selectionMode = true,
+            selected = if (id in library.selected) library.selected - id else library.selected + id)
     }
-    fun selectAll() { library = library.copy(selected = library.entries.map { it.id }.toSet()) }
-    fun clearSelection() { library = library.copy(selected = emptySet()) }
+    fun selectAll() { library = library.copy(selectionMode = true, selected = library.entries.map { it.id }.toSet()) }
+    fun clearSelection() { library = library.copy(selectionMode = false, selected = emptySet()) }
     fun removeSelectedFromLibrary() {
         if (library.batch != null || library.importing || state.exporting) return
         val ids = library.selected
@@ -680,7 +716,7 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         library = library.copy(entries = library.entries.filterNot { it.id in ids },
             thumbnails = library.thumbnails - ids, originalThumbnails = library.originalThumbnails - ids,
             thumbnailErrors = library.thumbnailErrors - ids, thumbnailLoading = library.thumbnailLoading - ids,
-            selected = emptySet())
+            selected = emptySet(), selectionMode = false)
         persist()
         state = state.copy(notice = "已移出照片库 ${ids.size} 张，原文件保留")
     }
@@ -688,8 +724,10 @@ class EditorModel(application: Application) : AndroidViewModel(application) {
         library = library.copy(recipe = state.settings.colorRecipe())
         persist(); state = state.copy(notice = "调色配方已复制，保留每张照片自己的构图")
     }
-    fun applyRecipeToSelected() {
-        val recipe = library.recipe ?: return
+    fun enterSelectionMode() { library = library.copy(selectionMode = true) }
+    fun applyRecipeToSelected() { library.recipe?.let(::applyRecipeToSelected) }
+    fun applyRecipeToSelected(recipe: EditSettings) {
+        if (library.batch != null || library.importing || library.restoring) return
         val count = library.selected.size
         if (count == 0) return
         val changedIds = library.selected

@@ -1,0 +1,22 @@
+# 片屿 0.3.12
+
+片屿是一款 Android 胶片调色工具。用 20 款主风格和 4 款同系变体给照片、手机 DNG、视频和 JPEG 实况照片调色。导入、预览和导出都在手机上完成。
+
+## 安装
+
+[下载 pianyu-0.3.12-arm64.apk](https://github.com/CommonerOfWestWall/pianyu/releases/download/v0.3.12/pianyu-0.3.12-arm64.apk)。适用于 Android 10 及以上的 arm64 设备，胶片引擎使用 Vulkan。此版沿用 GitHub 旧版签名，可直接覆盖安装同签名的旧版并保留应用内照片库和配方。版本代码为 31。
+
+## 从 0.3.4 升级
+
+- **按场景找风格。** 横滑筛选日光、灯光、冷暖与四季。风格说明列出参考来源、色彩特点和适用场景，点标签可优先浏览匹配的风格。带黄铜圆点的主风格可切换同系变体。
+- **照片编辑。** 底栏按「风格」「调色」「构图」「配方」排列，切换风格和调色时保持画布大小。调色依次提供胶片曝光、相纸与印放、基础光影和 HSL。画面曝光可单独调整成片亮度。风格说明底部可切换片屿预设。
+- **整套套用与批量。** 编辑器可保存、复制个人配方或直接套用官方配方。单张套用后支持撤销。照片库可直接点「选择」进入多选，批量套用保留每张照片的构图。
+- **视频与 JPEG 实况。** 固定抽帧或封面预览，调色控件独立滚动，右上角直接导出。视频输出保留音轨的 SDR MP4，JPEG 实况可同时保存调色后的封面与内嵌视频，也可另存 MP4。
+
+## 验证与格式范围
+
+0.3.12 通过 29 项单元测试和 5 项 Redmi K80 Pro 真机测试，覆盖照片风格与构图、配方撤销、曝光、视频与 JPEG 实况。实况测试首轮等待导出按钮就绪超时，单独复跑通过。
+
+照片导出为 8-bit sRGB，可选 JPEG、PNG 和设备支持时的 HEIF。RAW 入口支持 DNG。视频调色使用固定曝光，颗粒和光晕用于静态照片。各厂商私有实况封装、HEIC 与 AVIF 实况暂未接入。
+
+[使用指南](https://github.com/CommonerOfWestWall/pianyu/blob/v0.3.12/docs/USER-GUIDE.md) · [源码与重建说明](https://github.com/CommonerOfWestWall/pianyu/blob/v0.3.12/docs/SOURCE-DISTRIBUTION.md) · [第三方许可](https://github.com/CommonerOfWestWall/pianyu/blob/v0.3.12/NOTICE.md)

@@ -5,14 +5,25 @@ import android.graphics.Color
 import android.media.MediaExtractor
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.SystemClock
+import android.view.accessibility.AccessibilityNodeInfo
+import androidx.activity.compose.setContent
 import androidx.core.content.FileProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.BySelector
+import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.regex.Pattern
 import kotlin.math.abs
 
 @RunWith(AndroidJUnit4::class)
@@ -80,14 +91,159 @@ class MediaFormatsDeviceTest {
         }
     }
 
-    private suspend fun withSample(test: suspend (File, Uri) -> Unit) {
+    @Test(timeout = 90_000)
+    fun videoGuideRanksLampLooksWithoutApplyingAnotherLook() = runBlocking {
+        val layoutFixture = File(context.cacheDir, "editor-finish-demo.mp4")
+            .takeIf { InstrumentationRegistry.getArguments().getString("useLayoutFixture") == "true" && it.isFile }
+        withSample(layoutFixture) { video, input ->
+            val device = UiDevice.getInstance(instrumentation)
+            fun node(selector: BySelector) = checkNotNull(device.wait(Until.findObject(selector), 10_000L)) {
+                "missing video editor node: $selector"
+            }
+            fun click(label: String) {
+                fun find(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+                    if (node == null) return null
+                    if (node.isVisibleToUser && (node.text?.toString() == label ||
+                            node.contentDescription?.toString() == label)) return node
+                    for (i in 0 until node.childCount) find(node.getChild(i))?.let { return it }
+                    return null
+                }
+                val deadline = SystemClock.uptimeMillis() + 8_000L
+                while (SystemClock.uptimeMillis() < deadline) {
+                    instrumentation.uiAutomation.clearCache()
+                    var target = find(instrumentation.uiAutomation.rootInActiveWindow)
+                    while (target != null && !target.isClickable) target = target.parent
+                    if (target?.isEnabled == true && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+                    SystemClock.sleep(100)
+                }
+                error("unable to click video editor label: $label")
+            }
+
+            device.executeShellCommand("am start -W -n studio.pianyu.app/.MainActivity")
+            lateinit var activity: MainActivity
+            instrumentation.runOnMainSync {
+                activity = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)
+                    .filterIsInstance<MainActivity>().first()
+                activity.setContent { PianyuTheme { VideoEditor(VideoIO.Source(input)) {} } }
+            }
+            try {
+                assertTrue(device.wait(Until.hasObject(By.desc("胶片风格").enabled(true)), 10_000L))
+                click("胶片风格")
+                click("夜色光晕")
+                val scene = node(By.desc("按场景排序"))
+                val density = context.resources.displayMetrics.density
+                assertTrue("video scene strip must be one 32dp row", scene.visibleBounds.height() / density in 30f..33f)
+                assertFalse(device.hasObject(By.text("场景优先")))
+                click("灯光")
+                val ordered = sortedLookCards(LookSort.ARTIFICIAL).take(3)
+                    .map { node(By.text(it.value.name)).visibleBounds.top }
+                assertTrue(ordered.zipWithNext().all { (a, b) -> a < b })
+                device.pressBack()
+                node(By.text("胶片风格 · 夜色光晕"))
+                click("全部")
+                node(By.text("电影日光"))
+                device.pressBack()
+                node(By.text("胶片风格 · 夜色光晕"))
+                click("胶片风格")
+                click("电影日光")
+                node(By.text("同系变体"))
+                click("橄榄暖影")
+                val selectedVariant = By.checked(true).hasChild(By.text("橄榄暖影"))
+                val deadline = SystemClock.uptimeMillis() + 8_000L
+                while (SystemClock.uptimeMillis() < deadline) {
+                    instrumentation.uiAutomation.clearCache()
+                    if (device.hasObject(selectedVariant)) break
+                    SystemClock.sleep(100)
+                }
+                assertTrue("variant chip must indicate the active style", device.hasObject(selectedVariant))
+                node(By.text("胶片风格 · 电影日光"))
+                assertFalse(device.hasObject(By.desc("细调配方")))
+                assertFalse(device.hasObject(By.textStartsWith("细调配方")))
+                val preview = By.desc("视频抽帧预览")
+                val beforeScroll = node(preview).visibleBounds
+                val back = By.text("‹ 返回")
+                val export = By.clickable(true).enabled(true).hasDescendant(By.text("导出"))
+                val title = node(By.text("视频调色")).visibleBounds
+                assertTrue(node(back).visibleBounds.right < title.left)
+                assertTrue(node(export).visibleBounds.left > title.right)
+                assertTrue(node(By.text("看原片")).visibleBounds.bottom <= beforeScroll.bottom)
+                val guide = node(By.text("风格说明")).visibleBounds
+                val lookButton = node(By.desc("胶片风格")).visibleBounds
+                assertTrue("style guide and picker must share a row", guide.centerY() in lookButton.top..lookButton.bottom)
+                val printLabel = By.text("印放曝光")
+                val printTop = node(printLabel).visibleBounds.top
+                val controls = By.scrollable(true).hasDescendant(printLabel)
+                val controlTop = node(controls).visibleBounds.top
+                assertTrue("the scrolling viewport must keep a gap below the preview",
+                    (controlTop - beforeScroll.bottom) / density in 8f..10f)
+                node(controls).scroll(Direction.DOWN, .55f)
+                assertEquals("the gap above the scrolling viewport must stay fixed",
+                    controlTop, node(controls).visibleBounds.top)
+                assertTrue("the sliders must move inside the control area", node(printLabel).visibleBounds.top < printTop)
+                assertEquals("scrolling controls must keep the full preview fixed", beforeScroll, node(preview).visibleBounds)
+
+                val slider = node(By.desc("风格强度")).visibleBounds
+                assertTrue(device.swipe(slider.left + slider.width() * 3 / 4, slider.centerY(),
+                    slider.centerX(), slider.centerY(), 18))
+                val valueBounds = node(By.desc("输入风格强度数值")).visibleBounds
+                val changedValue = node(By.text(Pattern.compile("[45][0-9]|6[0-5]"))).visibleBounds
+                assertTrue("the video strength slider must update its displayed value",
+                    valueBounds.contains(changedValue.centerX(), changedValue.centerY()))
+                node(export)
+                assertEquals("dragging the slider must keep the preview fixed", beforeScroll, node(preview).visibleBounds)
+                val evidence = File(context.getExternalFilesDir(null), "editor-finish-ui").apply { mkdirs() }
+                assertTrue("video editor screenshot", device.takeScreenshot(File(evidence, "05-video.png")))
+                File(evidence, "video-preview.txt").writeText("before=$beforeScroll\n" +
+                    "after_scroll_and_drag=${node(preview).visibleBounds}\n")
+                node(By.text("看原片")).click()
+                instrumentation.waitForIdleSync()
+                instrumentation.uiAutomation.clearCache()
+                node(By.text("看调色")).click()
+                instrumentation.waitForIdleSync()
+                instrumentation.uiAutomation.clearCache()
+                node(By.text("看原片"))
+
+                val motionFile = File(video.parentFile, "layout-check_MP.jpg")
+                val cover = VideoIO.preview(context, VideoIO.Source(input))
+                try {
+                    motionFile.outputStream().use { MotionPhoto.write(cover, video, 0L, it) }
+                } finally {
+                    cover.recycle()
+                }
+                val motion = checkNotNull(VideoIO.identify(context, uri(motionFile)))
+                assertNotNull(motion.motion)
+                instrumentation.runOnMainSync {
+                    activity.setContent { PianyuTheme { VideoEditor(motion) {} } }
+                }
+                node(By.text("实况照片"))
+                node(By.desc("封面预览"))
+                node(export)
+                val motionSceneRow = node(By.desc("按场景排序"))
+                assertTrue(motionSceneRow.visibleBounds.height() / density in 30f..33f)
+                node(By.text("同系变体"))
+                val coverBounds = node(By.desc("封面预览")).visibleBounds
+                node(By.scrollable(true).hasDescendant(By.text("印放曝光"))).scroll(Direction.DOWN, .75f)
+                node(By.text("另存为 MP4"))
+                node(export)
+                assertEquals(coverBounds, node(By.desc("封面预览")).visibleBounds)
+                assertFalse(device.hasObject(By.textStartsWith("细调配方")))
+            } catch (failure: Throwable) {
+                device.dumpWindowHierarchy(File(context.getExternalFilesDir(null), "editor-finish-video-failure.xml"))
+                throw failure
+            } finally {
+                instrumentation.runOnMainSync { activity.recreate() }
+                instrumentation.waitForIdleSync()
+            }
+        }
+    }
+
+    private suspend fun withSample(fixture: File? = null, test: suspend (File, Uri) -> Unit) {
         val directory = File.createTempFile("media-test-", ".tmp", File(context.cacheDir, "exports").apply { mkdirs() })
         check(directory.delete() && directory.mkdir())
         try {
             val video = File(directory, "input.mp4")
-            instrumentation.context.assets.open("media/grades.mp4").use { input ->
-                video.outputStream().use(input::copyTo)
-            }
+            val source = fixture?.inputStream() ?: instrumentation.context.assets.open("media/grades.mp4")
+            source.use { input -> video.outputStream().use(input::copyTo) }
             test(video, uri(video))
         } finally { directory.deleteRecursively() }
     }
