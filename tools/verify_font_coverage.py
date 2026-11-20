@@ -57,7 +57,7 @@ def main() -> int:
     font = TTFont(str(args.font), lazy=False)
     cmap = font.getBestCmap() or {}
     metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
-    old_chars = metadata["old_font_characters"]
+    old_chars = metadata["old_font_characters"] + metadata.get("previous_font_characters", "")
     old_missing = sorted(set(old_chars) - {chr(codepoint) for codepoint in cmap})
     weight_ok = font["OS/2"].usWeightClass == 600
     missing = sorted({char for value in required for char in value if ord(char) not in cmap})

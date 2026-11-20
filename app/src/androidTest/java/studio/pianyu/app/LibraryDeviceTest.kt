@@ -175,6 +175,39 @@ class LibraryDeviceTest {
         }
     }
 
+    @Test
+    fun explicitRecipeApplyWithoutClipboardPreservesSelectedGeometryAndLeavesOthersUntouched() {
+        val application = IsolatedTestApplication.create(target)
+        try {
+            val model = EditorModel(application)
+            awaitRestored(model)
+            val uris = listOf("demo.jpg", "sample_orientation6.jpg").mapIndexed { index, name ->
+                fixtureUri(name, "explicit-recipe-$index-${UUID.randomUUID()}")
+            }
+            onMain { model.importPhotos(uris, openSingle = false) }
+            awaitImport(model, 2)
+            val selectedId = readLibrary(model).entries.first().id
+            val untouchedId = readLibrary(model).entries.last().id
+            onMain { model.openPhoto(selectedId) }
+            awaitEditor(model)
+            val geometry = readEditor(model).settings.copy(cropAspect = 1.4f,
+                crop = CropRect(.1f, .2f, .82f, .94f), quarterTurns = 3,
+                straightenDegrees = -6f, flipHorizontal = true, flipVertical = true)
+            onMain { model.edit(geometry); model.finishAdjustment(); model.backToLibrary() }
+            awaitLibrary(model)
+            val untouchedBefore = readLibrary(model).entries.first { it.id == untouchedId }.settings
+            val recipe = EditSettings(lookIndex = 2, strength = .42f, exposure = .35f,
+                warmth = -.2f, tint = .15f, grain = .3f).colorRecipe()
+            onMain { model.toggleSelected(selectedId); model.applyRecipeToSelected(recipe) }
+            val after = readLibrary(model)
+            val selectedAfter = after.entries.first { it.id == selectedId }.settings
+            assertEquals("explicit recipe must apply without copied clipboard state",
+                geometry.withColorRecipe(recipe), selectedAfter)
+            assertEquals("unselected photo must remain unchanged", untouchedBefore,
+                after.entries.first { it.id == untouchedId }.settings)
+        } finally { application.cleanup() }
+    }
+
     private fun fixtureUri(name: String, outputName: String, create: Boolean = false): Uri {
         val file = File(target.cacheDir, "exports/$outputName").apply {
             parentFile?.mkdirs()

@@ -31,20 +31,28 @@ class EditorUiDeviceTest {
             android.util.Log.i("PianyuUiTest", "activity launched; wait demo")
             val demo = device.wait(Until.findObject(By.text("试用示例")), 1500L) ?: device.wait(Until.findObject(By.text("打开示例")),1500L) ?: device.wait(Until.findObject(By.desc("窗边静物 · 示例")), timeout) ?: error("demo unavailable")
             assertTrue("demo action must be enabled", demo.isEnabled)
+            val expectsGuide = demo.text == "试用示例" || demo.text == "打开示例"
             demo.click()
             android.util.Log.i("PianyuUiTest", "demo clicked")
+            if (expectsGuide) {
+                waitText("先按场景选风格，拖动强度或长按对比原图。")
+                waitText("知道了").click()
+                waitText("全部")
+            }
 
             waitText("日常暖色")
+            waitText("风格说明").click()
+            waitText("明白了").click()
             val export = device.wait(Until.findObject(By.text("导出").enabled(true)), timeout)
                 ?: error("Export remained disabled after rendering")
             assertTrue("export action must be enabled after rendering", export.isEnabled)
             takeEvidence("01-editor.png")
 
             waitText("调色").click()
-            waitText("曝光")
+            waitText("胶片曝光")
             takeEvidence("02-adjustment.png")
 
-            waitText("裁切 / 旋转").click()
+            waitText("构图").click()
             waitText("1:1").click()
             waitText("完成").click()
             waitText("风格").click()
@@ -73,11 +81,16 @@ class EditorUiDeviceTest {
 
             waitText("‹ 照片库").click()
             waitText("导入").click()
-            val pickerDeadline = System.currentTimeMillis() + timeout
-            while (device.currentPackageName == packageName && System.currentTimeMillis() < pickerDeadline) {
-                Thread.sleep(100)
-            }
-            assertTrue("system picker did not open", device.currentPackageName != packageName)
+            waitText("选择导入来源")
+            waitText("取消").click()
+            assertEquals(packageName, device.currentPackageName)
+            waitText("导入").click()
+            waitText("从文件选").click()
+            awaitPicker()
+            device.pressBack()
+            waitText("导入").click()
+            waitText("从相册选").click()
+            awaitPicker()
             val pickerPackage = device.currentPackageName
             assertTrue("picker package must be external", pickerPackage != packageName)
             val publicFixture = device.findObject(By.textContains("Pianyu-public-"))
@@ -90,6 +103,12 @@ class EditorUiDeviceTest {
                 assertTrue("picker back did not return to editor", device.wait(Until.hasObject(By.text("导入")), timeout))
             }
         }
+    }
+
+    private fun awaitPicker() {
+        val deadline = System.currentTimeMillis() + timeout
+        while (device.currentPackageName == packageName && System.currentTimeMillis() < deadline) Thread.sleep(100)
+        assertTrue("system picker did not open", device.currentPackageName != packageName)
     }
 
     private fun waitText(text: String) =

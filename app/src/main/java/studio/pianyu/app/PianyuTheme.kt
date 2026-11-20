@@ -17,10 +17,14 @@ private val PianyuColors = darkColorScheme(
     background = Color(0xFF20211F),
     onBackground = Color(0xFFF4EBDD),
     surface = Color(0xFF252522),
+    surfaceContainerHigh = Color(0xFF30312B),
     onSurface = Color(0xFFF4EBDD),
     surfaceVariant = Color(0xFF363532),
     onSurfaceVariant = Color(0xFFD3C7B5),
-    outline = Color(0xFF6D675E)
+    outline = Color(0xFF6D675E),
+    inverseSurface = Color(0xFF343530),
+    inverseOnSurface = WarmWhite,
+    inversePrimary = Brass
 )
 
 @Composable

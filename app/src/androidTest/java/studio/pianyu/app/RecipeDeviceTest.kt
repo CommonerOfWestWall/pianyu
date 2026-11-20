@@ -1,6 +1,8 @@
 package studio.pianyu.app
 
 import android.os.SystemClock
+import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -111,5 +113,53 @@ class RecipeDeviceTest {
             onMain {models.forEach{it.viewModelScope.cancel()}}
             app.cleanup()
         }
+    }
+
+    @Test fun recipeUndoTokenOnlyUndoesItsOwnImmediateApplication() {
+        val app=IsolatedTestApplication.create(instrumentation.targetContext)
+        val models=mutableListOf<EditorModel>()
+        try {
+            lateinit var model: EditorModel
+            onMain { model=EditorModel(app);models.add(model);model.loadDemo() }
+            await {!model.recipesLoading&&!model.library.restoring&&!model.state.loading&&model.state.displayedSettings==model.state.settings&&model.state.source!=null}
+            val before=EditSettings(lookIndex=1, brightness=.18f, warmth=-.12f, crop=CropRect(.12f,.1f,.86f,.9f), quarterTurns=1)
+            onMain {
+                model.edit(before);model.finishAdjustment();model.applyCreativeRecipe(CreativeRecipes.first().id)
+                assertNotNull(model.state.recipeUndoId)
+                val token=model.state.recipeUndoId!!
+                assertTrue("immediate recipe undo must succeed", model.undoRecipeApplication(token))
+                assertEquals(before,model.state.settings)
+
+                model.applyCreativeRecipe(CreativeRecipes.first().id)
+                val newerToken=model.state.recipeUndoId!!
+                val newer=model.state.settings.copy(brightness=-.31f)
+                model.edit(newer);model.finishAdjustment()
+                assertFalse("recipe token must expire after a newer edit", model.undoRecipeApplication(newerToken))
+                assertEquals(newer,model.state.settings)
+            }
+            var crossPhotoToken = 0L
+            onMain {
+                model.applyCreativeRecipe(CreativeRecipes.first().id)
+                crossPhotoToken=model.state.recipeUndoId!!
+                model.backToLibrary()
+            }
+            val otherUri=fixtureUri(app,"sample_orientation6.jpg","recipe-token-${System.currentTimeMillis()}")
+            onMain { model.importPhotos(listOf(otherUri),openSingle=false) }
+            await {!model.library.importing&&model.library.entries.size==2&&model.library.editorId==null}
+            lateinit var otherId:String
+            onMain { otherId=model.library.entries.first { it.id != DEMO_PHOTO_ID }.id }
+            onMain { model.openPhoto(otherId) }
+            await {!model.state.loading&&model.state.source!=null&&model.state.displayedSettings==model.state.settings}
+            onMain { assertFalse("recipe token must not cross photos", model.undoRecipeApplication(crossPhotoToken)) }
+        } finally { onMain { models.forEach { it.viewModelScope.cancel() } }; app.cleanup() }
+    }
+
+    private fun fixtureUri(app:IsolatedTestApplication, name:String, outputName:String): Uri {
+        val file=File(app.cacheDir,"exports/$outputName").apply {
+            parentFile?.mkdirs()
+            val assets=if(name=="demo.jpg") app.assets else instrumentation.context.assets
+            assets.open(name).use { input -> outputStream().use(input::copyTo) }
+        }
+        return FileProvider.getUriForFile(app,"${app.packageName}.files",file)
     }
 }

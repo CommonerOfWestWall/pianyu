@@ -17,14 +17,14 @@ class ReferenceStylesTest {
         assertEquals(
             listOf("mist-coast", "soft-daylight", "olive-story", "cyan-travel", "golden-landscape",
                 "blue-hour", "forest-deep", "muted-teal-coast"),
-            Looks.drop(7).map { it.id })
-        assertTrue(Looks.drop(7).all { it.creative })
+            Looks.subList(7, 15).map { it.id })
+        assertTrue(Looks.subList(7, 15).all { it.creative })
         assertEquals(Looks.size, Looks.map { it.id }.toSet().size)
         assertEquals(Looks.size, Looks.map { it.name }.toSet().size)
     }
 
     @Test fun addedPalettesHaveDistinctFinishesAndReuseExistingMaterials() {
-        val finishes = Looks.drop(7).map { look ->
+        val finishes = Looks.subList(7, 15).map { look ->
             val base = Looks.take(7).firstOrNull {
                 it.film == look.film && it.paper == look.paper && it.positive == look.positive && it.halo == look.halo
             }
@@ -113,5 +113,103 @@ class ReferenceStylesTest {
         assertEquals(0.00029414861979658096f, finish.fade, 0f)
         assertEquals(HslChannel(-0.28453889193055176f, -0.2825971585240644f, 0.11997563468630096f), finish.hsl.cyan)
         assertEquals(HslChannel(-0.3155989179608355f, -0.24513076186008043f, 0.11988013933202213f), finish.hsl.blue)
+    }
+
+    @Test fun paletteLooksAppendWithoutChangingPersistedIndices() {
+        assertEquals(listOf("daily", "cinema", "night", "natural", "landscape", "retro", "softmono",
+            "mist-coast", "soft-daylight", "olive-story", "cyan-travel", "golden-landscape", "blue-hour",
+            "forest-deep", "muted-teal-coast"), Looks.take(15).map { it.id })
+        assertEquals(9, Looks.drop(15).size)
+        assertEquals(listOf("浅绿柔光", "暖粉淡彩", "金色日照", "冷灰薄雾", "深秋暖雾"),
+            SeasonalPalettes.map { it.look.name })
+        assertEquals(listOf("青蓝亮调", "电影暖亮", "电影冷影", "电影暖影"),
+            CinemaPalettes.map { it.look.name })
+        assertEquals(listOf("spring-cool", "spring-warm", "summer-warm", "autumn-cool", "autumn-warm",
+            "cinema-tungsten-cool-bright", "cinema-daylight-warm-bright", "cinema-daylight-cool-shadow",
+            "cinema-tungsten-warm-shadow"), Looks.drop(15).map { it.id })
+        assertEquals(
+            listOf("cinema", "daily", "soft-daylight", "night", "retro", "golden-landscape",
+                "blue-hour", "muted-teal-coast", "mist-coast", "cyan-travel", "natural",
+                "olive-story", "forest-deep", "landscape", "softmono", "spring-cool", "spring-warm",
+                "summer-warm", "autumn-cool", "autumn-warm", "cinema-tungsten-cool-bright",
+                "cinema-daylight-warm-bright", "cinema-daylight-cool-shadow", "cinema-tungsten-warm-shadow")
+                .filterNot { it in LookVariants },
+            LookCards.map { it.value.id })
+    }
+
+    @Test fun newPalettesHaveDistinctBoundedFinishesAndCinemaPairAxes() {
+        val finishes = Looks.drop(15).map { look ->
+            val finish = look.finishSettings(EditSettings())
+            assertTrue(finish.exposure.isFinite())
+            assertTrue(finish.contrast in -1f..1f && finish.saturation in -1f..1f)
+            assertEquals(finish.hsl, finish.hsl.bounded())
+            finish
+        }
+        assertEquals(finishes.size, finishes.toSet().size)
+        assertTrue(CinemaPalettes.all { !it.look.halo && it.look.paper == "kodak_2383" })
+        assertTrue(CinemaPalettes[0].look.film == "kodak_vision3_500t")
+        assertTrue(CinemaPalettes[1].look.film == "kodak_vision3_250d")
+        assertTrue(CinemaPalettes[2].look.film == "kodak_vision3_250d")
+        assertTrue(CinemaPalettes[3].look.film == "kodak_vision3_500t")
+        assertNotEquals(CinemaPalettes[1].finish.warmth, CinemaPalettes[2].finish.warmth)
+        assertNotEquals(CinemaPalettes[1].finish.exposure, CinemaPalettes[2].finish.exposure)
+        assertNotEquals(CinemaPalettes[2].finish.shadows, CinemaPalettes[3].finish.shadows)
+    }
+
+    @Test fun everyLookHasCompleteGuideAndExistingIndex() {
+        val covered = LookCards.map { it.index } + VariantRecipes.map { it.settings.lookIndex }
+        assertEquals(Looks.indices.toList(), covered.sorted())
+        LookCards.forEach { card -> assertSame(Looks[card.index], card.value) }
+        Looks.forEach { look ->
+            val guide = look.guidance
+            assertTrue(guide.source.isNotBlank())
+            assertTrue(guide.character.isNotBlank())
+            assertTrue(guide.scenes.isNotBlank())
+            assertTrue(guide.tags.isNotEmpty())
+        }
+    }
+
+    @Test fun variantsKeepTheirOriginalGradeAndHaveAnIndependentParent() {
+        assertTrue(VariantRecipes.isNotEmpty())
+        val distinctRecipes = CreativeRecipes + VariantRecipes
+        assertEquals(distinctRecipes.size, distinctRecipes.map { it.id }.toSet().size)
+        for (recipe in VariantRecipes) {
+            val index = recipe.settings.lookIndex
+            val variant = Looks[index]
+            val parent = variant.primaryStyle()
+            assertEquals(EditSettings(lookIndex = index), recipe.settings)
+            assertEquals(variant.name, recipe.name)
+            assertTrue(parent.id in LookCards.map { it.value.id })
+            assertTrue(parent.browseTags().containsAll(variant.guidance.tags))
+        }
+    }
+
+    @Test fun lookSortsUseEarliestMatchingTagAndStableTies() {
+        val original = LookCards
+        for (sort in LookSort.entries) {
+            val sorted = sortedLookCards(sort)
+            assertEquals(original.size, sorted.size)
+            assertEquals(original.map { it.index }.toSet(), sorted.map { it.index }.toSet())
+            val priority = if (sort in setOf(LookSort.SPRING, LookSort.SUMMER, LookSort.AUTUMN, LookSort.WINTER)) {
+                val seasons = listOf(LookSort.SPRING, LookSort.SUMMER, LookSort.AUTUMN, LookSort.WINTER)
+                val start = seasons.indexOf(sort)
+                seasons.drop(start) + seasons.take(start)
+            } else listOf(sort)
+            assertTrue(sorted.first().value.browseTags().contains(sort))
+            val ranked = sorted.groupBy { card ->
+                val firstMatch = priority.indexOfFirst { it in card.value.browseTags() }
+                if (firstMatch < 0) priority.size else firstMatch
+            }
+            assertEquals(ranked.keys.sorted(), ranked.keys.toList())
+            for (tied in ranked.values) {
+                assertEquals(original.filter { it in tied }, tied)
+            }
+            sorted.forEach { card -> assertSame(Looks[card.index], card.value) }
+        }
+    }
+
+    @Test fun defaultLookSortPreservesCardIdentityAndOrder() {
+        assertEquals(LookCards.map { it.index }, sortedLookCards(null).map { it.index })
+        LookCards.indices.forEach { assertSame(LookCards[it], sortedLookCards(null)[it]) }
     }
 }

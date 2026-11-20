@@ -1,8 +1,6 @@
 package studio.pianyu.app
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,11 +43,11 @@ fun FilmPrintPanel(model: EditorModel) {
     val name = PrintStocks.firstOrNull { it.id == active }?.name ?: active
     var choosing by remember { mutableStateOf(false) }
     var more by remember(look.id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState())
+    Column(Modifier.fillMaxWidth()
         .padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (look.positive) {
             Text("正片直接扫描 · 不经过相纸", style = MaterialTheme.typography.bodyMedium)
-            Text("此风格保留正片扫描路径，相纸和印放曝光不参与处理。需要改变底片响应，请回到「胶片曝光」。",
+            Text("此风格保留正片扫描路径，相纸和印放曝光不参与处理。需要改变底片响应，请回到「胶片」。",
                 style = MaterialTheme.typography.bodySmall)
         } else {
             Text(if (look.paper == "kodak_2383") "电影拷贝片" else "相纸", style = MaterialTheme.typography.labelLarge)
@@ -83,7 +81,7 @@ fun FilmPrintPanel(model: EditorModel) {
                     model.edit(settings.copy(printExposure = it)); model.finishAdjustment()
                 }
             }
-            Text("EV · 改变相纸或拷贝片受到的曝光，正值不一定让成片变亮。胶片曝光与成片「曝光」仍可分别调节。",
+            Text("EV · 改变相纸或拷贝片受到的曝光，正值不一定让成片变亮。胶片曝光和画面曝光可分别调节。",
                 style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = {
                 model.edit(settings.copy(printStock = "", printExposure = 0f)); model.finishAdjustment()

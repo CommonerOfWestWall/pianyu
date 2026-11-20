@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
 /** The displayed units are also the units accepted by the entry field. */
 @Composable
 fun ParameterValue(label: String, value: Float, range: ClosedFloatingPointRange<Float>,
-                   exposure: Boolean = false, onCommit: (Float) -> Unit) {
+                   exposure: Boolean = false, hint: String? = null, onCommit: (Float) -> Unit) {
     val scale = if (exposure) 1f else 100f
     fun display(v: Float) = if (exposure) String.format(Locale.ROOT, "%.2f", v)
         else (v * scale).roundToInt().toString()
@@ -32,7 +32,9 @@ fun ParameterValue(label: String, value: Float, range: ClosedFloatingPointRange<
             text = {
                 OutlinedTextField(value = input, onValueChange = { input = it }, singleLine = true,
                     label = { Text(if (exposure) "$label EV" else label) },
-                    supportingText = { Text("范围 ${display(range.start)} 至 ${display(range.endInclusive)}，按此单位输入") },
+                    supportingText = {
+                        Text(hint ?: "范围 ${display(range.start)} 至 ${display(range.endInclusive)}，按此单位输入")
+                    },
                     isError = !valid, modifier = Modifier.semantics { contentDescription = "${label}数值输入框" })
             },
             confirmButton = { TextButton(enabled = valid, onClick = {
